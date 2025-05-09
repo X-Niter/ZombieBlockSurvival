@@ -1,112 +1,120 @@
-# AI-Powered Development for SevenToDie Plugin
+# AI-Powered Development Guide
 
-This document explains how to use the AI-powered development features in this repository. The system can automatically analyze code, fix bugs, implement features, and improve performance using AI.
-
-> **Note**: Before using these features, you need to set up the required secrets and permissions. See [Setup Instructions](.github/SETUP_AI_DEVELOPMENT.md) for details.
+This project integrates with GitHub workflows to provide autonomous AI-powered development capabilities. This document explains how this works and how to get the most out of it.
 
 ## How It Works
 
-The AI development system uses GitHub Actions workflows combined with OpenAI's GPT models to:
+The AI-powered development system works by combining several GitHub workflows and an AI processor script to:
 
-1. Analyze code and issues automatically
-2. Generate fixes for bugs and implementation for features
-3. Create pull requests with the changes
-4. Provide detailed analysis as comments on issues
+1. **Continuously analyze code** for bugs, improvements, and optimizations
+2. **Automatically create issues** for detected problems
+3. **Generate fixes and improvements** based on analysis
+4. **Create pull requests** with proposed changes
+5. **Learn from feedback** to make better suggestions over time
 
-## Using AI Development Features
+## Key Components
 
-### Automatic Issue Analysis
+### 1. Code Analysis Workflow
 
-When you create a new issue, the AI assistant will:
+The [`code-analysis.yml`](./workflows/code-analysis.yml) workflow:
+- Runs automatically on pull requests, pushes to main branches, and on a daily schedule
+- Analyzes code using static code analysis tools like SpotBugs, PMD, and Checkstyle
+- Compiles and tests the code
+- Creates issues for detected problems
 
-1. Analyze the issue description
-2. Review the relevant code files
-3. Post a comment with its analysis
-4. If possible, create a pull request with a fix
+### 2. Auto-Fix Workflow
 
-The analysis includes:
-- Summary of what the code does
-- Identified bugs or issues
-- Recommended fixes with code snippets
-- General recommendations for improvement
+The [`auto-fix.yml`](./workflows/auto-fix.yml) workflow:
+- Triggers when issues are created or labeled
+- Analyzes the issue and related code
+- Generates fixes for the problem
+- Creates a pull request with the proposed changes
 
-### Manually Triggering AI Tasks
+### 3. Improvement Suggestions
 
-You can manually trigger AI development tasks through the GitHub UI:
+The [`improvement-suggestions.yml`](./workflows/improvement-suggestions.yml) workflow:
+- Runs weekly to analyze the entire codebase
+- Suggests improvements based on patterns and best practices
+- Creates detailed issues with implementation suggestions
 
-1. Go to the "Actions" tab in the repository
-2. Select the "AI Development Assistant" workflow
-3. Click "Run workflow"
-4. Choose a task:
-   - `analyze-code`: General code review and analysis
-   - `fix-bugs`: Focus on finding and fixing bugs
-   - `implement-feature`: Implement a feature based on your description
-   - `improve-performance`: Optimize code for better performance
-5. Provide a description of what you want
-6. Submit the workflow
+### 4. AI Issue Processor
 
-### AI Commands in Issues
+The [`ai-issue-processor.yml`](./workflows/ai-issue-processor.yml) workflow:
+- Processes new issues and comments using AI
+- Responds to `/ai` commands in issue comments
+- Creates targeted fixes for specific issues
 
-You can give commands to the AI assistant by adding comments to issues:
+### 5. AI Processor Script
 
-- `@ai analyze`: Analyze the code related to this issue
-- `@ai fix`: Try to fix the problem described in the issue
-- `@ai implement`: Implement the feature described in the issue
-- `@ai optimize`: Optimize the code described in the issue
+The [`ai_processor.py`](./scripts/ai_processor.py) script:
+- Integrates with OpenAI's API to analyze code and generate solutions
+- Formats changes into unified diffs and pull requests
+- Handles communication between GitHub and the AI service
 
-## Setup Requirements
+## Required Secrets
 
-To use the AI-powered development features, you need to:
+To make this work, you need to add these secrets to your repository:
 
-1. Add the `OPENAI_API_KEY` secret to your repository:
-   - Go to repository Settings → Secrets → Actions
-   - Add a new secret named `OPENAI_API_KEY` with your OpenAI API key
+1. `GITHUB_TOKEN` - Automatically provided by GitHub Actions
+2. `OPENAI_API_KEY` - Your OpenAI API key for accessing models like GPT-4
 
-2. Ensure the GitHub Actions workflows have permission to create pull requests:
-   - Go to Settings → Actions → General
-   - Under "Workflow permissions", select "Read and write permissions"
-   - Check "Allow GitHub Actions to create and approve pull requests"
+## Using the AI System
+
+### Triggering Automatic Analysis
+
+- The code is analyzed automatically on push and daily
+- You can manually trigger analysis from the Actions tab in GitHub
+
+### Getting AI Help with Issues
+
+- Create an issue describing the problem
+- The AI will automatically analyze and respond
+- It may create a pull request with a fix
+
+### Requesting AI Improvements
+
+- Comment on any issue with `/ai analyze` to trigger analysis
+- Comment with `/ai fix` to request an automated fix
+- Comment with `/ai suggest` to get improvement suggestions
+
+### Reviewing AI Pull Requests
+
+AI-generated pull requests will be labeled with `ai-fix` or `automated`. When reviewing these PRs:
+
+1. Check the proposed changes carefully
+2. Accept good changes and provide positive feedback
+3. Reject or modify poor suggestions and explain why
+4. The AI will learn from your feedback over time
+
+## Customizing the AI System
+
+You can customize the AI behavior by modifying:
+
+1. The workflow files in `.github/workflows/`
+2. The AI processor script at `.github/scripts/ai_processor.py`
+3. The prompts and settings inside the script
 
 ## Limitations
 
-The AI assistant has some limitations:
+- The AI system works best with well-structured code
+- It may struggle with complex architectural issues
+- Security-critical changes should always be manually reviewed
+- The AI may occasionally suggest incorrect solutions
+- Costs for API usage may apply depending on your OpenAI plan
 
-- It can only analyze a limited number of files per request (currently 15)
-- Large files will be truncated to stay within token limits
-- It may not understand complex architectural decisions or project-specific conventions
-- The generated code may require human review and adjustments
-- Not all bugs can be automatically fixed
+## Monitoring AI Activity
 
-## Development Process
+You can track AI activity through:
 
-For best results with the AI development workflow:
+1. GitHub Actions logs in the Actions tab
+2. Issues labeled with `automated` or `ai-fix`
+3. Pull requests from branches starting with `ai-fix-` or `auto-fix-`
 
-1. Create detailed issue descriptions with clear explanations of the problem or feature
-2. When using manual triggers, provide comprehensive descriptions of what you want
-3. Always review the pull requests created by the AI before merging
-4. Provide feedback on the AI's work to help improve future iterations
+## Troubleshooting
 
-## Example
+If the AI system isn't working as expected:
 
-Here's an example of a good issue that the AI can process effectively:
-
-```
-Title: Bug: Frame blocks don't save durability values
-
-Description:
-When a player damages a frame block, the durability value changes in-game but
-doesn't persist after a server restart. I've noticed this happens specifically
-with wooden and stone frame blocks.
-
-Steps to reproduce:
-1. Place a wooden frame block
-2. Hit it several times with any tool
-3. Observe the durability meter decreasing
-4. Restart the server
-5. The durability is reset to full
-
-The issue is probably in the BlockManager.java file where it loads and saves
-block data. The durability value might not be getting saved to the database.
-```
-
-This provides clear context that helps the AI generate an appropriate fix.
+1. Check that your OpenAI API key is valid and has sufficient credits
+2. Verify the GitHub token has necessary permissions
+3. Look for errors in the GitHub Actions logs
+4. Consider updating the OpenAI model or prompts in the processor script

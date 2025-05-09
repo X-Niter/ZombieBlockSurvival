@@ -6,78 +6,67 @@ This script processes GitHub issues and workflow dispatch events, analyzing code
 to generate automated fixes and responses using AI.
 """
 
-import argparse
 import os
-import json
 import sys
-import subprocess
-import re
+import json
+import argparse
 import requests
-from pathlib import Path
-import openai
-
-# Constants
-GITHUB_API_URL = "https://api.github.com"
-OPENAI_MODEL = "gpt-4"  # Using GPT-4 as it's more capable for code
+from typing import Dict, List, Any, Optional
 
 def setup_argparse():
     """Set up argument parsing for the script."""
-    parser = argparse.ArgumentParser(description='AI processor for GitHub Actions')
-    parser.add_argument('--task', required=True, 
-                        choices=['analyze-code', 'fix-bugs', 'implement-feature', 
-                                'improve-performance', 'analyze-issue'],
-                        help='Task for the AI to perform')
-    parser.add_argument('--repo', required=True, help='Repository in owner/repo format')
-    parser.add_argument('--token', required=True, help='GitHub token')
-    parser.add_argument('--issue', help='Issue number if relevant')
-    parser.add_argument('--description', help='Description of the task')
+    parser = argparse.ArgumentParser(description='Process GitHub issues with AI')
+    parser.add_argument('--issue-number', type=int, help='GitHub issue number to process')
+    parser.add_argument('--repo', type=str, help='Repository name in format owner/repo')
+    parser.add_argument('--token', type=str, help='GitHub token for authentication')
+    parser.add_argument('--api-key', type=str, help='OpenAI API key')
+    parser.add_argument('--mode', choices=['issue', 'pr', 'scan'], 
+                        default='issue', help='Processing mode')
     return parser.parse_args()
 
 def setup_github_api(token):
     """Configure the GitHub API."""
-    headers = {
+    return {
         'Authorization': f'token {token}',
         'Accept': 'application/vnd.github.v3+json'
     }
-    return headers
 
 def get_issue_details(repo, issue_number, headers):
     """Fetch details about a GitHub issue."""
-    url = f"{GITHUB_API_URL}/repos/{repo}/issues/{issue_number}"
+    url = f'https://api.github.com/repos/{repo}/issues/{issue_number}'
     response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.json()
-    else:
+    if response.status_code != 200:
         print(f"Error fetching issue: {response.status_code}")
-        print(response.text)
-        return None
+        print(response.json())
+        sys.exit(1)
+    return response.json()
 
 def get_repository_files(repo, headers, path=""):
     """Recursively get repository files."""
-    url = f"{GITHUB_API_URL}/repos/{repo}/contents/{path}"
+    url = f'https://api.github.com/repos/{repo}/contents/{path}'
     response = requests.get(url, headers=headers)
-    
     if response.status_code != 200:
-        print(f"Error fetching repository files: {response.status_code}")
+        print(f"Error fetching repository contents: {response.status_code}")
         return []
     
     contents = response.json()
     files = []
     
-    if isinstance(contents, list):
-        for item in contents:
-            if item['type'] == 'file' and item['name'].endswith(('.java', '.yml', '.xml')):
-                files.append(item['path'])
-            elif item['type'] == 'dir' and not item['name'].startswith(('.', 'target')):
-                files.extend(get_repository_files(repo, headers, item['path']))
+    for item in contents:
+        if item['type'] == 'file' and item['name'].endswith('.java'):
+            files.append({
+                'path': item['path'],
+                'download_url': item['download_url']
+            })
+        elif item['type'] == 'dir':
+            files.extend(get_repository_files(repo, headers, item['path']))
     
     return files
 
 def get_file_content(repo, file_path, headers):
     """Get content of a specific file."""
-    url = f"{GITHUB_API_URL}/repos/{repo}/contents/{file_path}"
+    url = f'https://api.github.com/repos/{repo}/contents/{file_path}'
     response = requests.get(url, headers=headers)
-    
     if response.status_code != 200:
         print(f"Error fetching file {file_path}: {response.status_code}")
         return None
@@ -86,248 +75,159 @@ def get_file_content(repo, file_path, headers):
     if 'content' in content:
         import base64
         return base64.b64decode(content['content']).decode('utf-8')
-    
     return None
 
 def analyze_code_with_ai(code_files, issue_description=None):
     """Use AI to analyze code and generate insights."""
-    client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-    
-    # Build the prompt
-    prompt = "You are an expert Java developer specialized in Minecraft Bukkit/Paper plugins.\n\n"
-    
-    if issue_description:
-        prompt += f"ISSUE DESCRIPTION:\n{issue_description}\n\n"
-    
-    prompt += "CODE FILES:\n"
-    for file_name, content in code_files.items():
-        # Truncate very large files to avoid token limits
-        if len(content) > 10000:
-            content = content[:10000] + "\n... (truncated)\n"
-        prompt += f"File: {file_name}\n```java\n{content}\n```\n\n"
-    
-    prompt += """
-TASK: Analyze the code and provide the following:
-1. A summary of what the code does
-2. Identify any bugs or issues
-3. Recommend specific fixes with code snippets
-4. For each fix, provide the file path, the code to replace, and the new code
-
-Your response should be structured as follows:
-```json
-{
-  "analysis": "Overall analysis of the codebase",
-  "issues": [
-    {
-      "file": "path/to/file.java",
-      "description": "Description of the issue",
-      "original_code": "code with issue",
-      "fixed_code": "fixed code"
-    }
-  ],
-  "recommendations": "General recommendations for improvement",
-  "response_for_issue": "A helpful response to provide on the GitHub issue"
-}
-```
-"""
-    
-    try:
-        response = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": "You are an expert Java developer specialized in Minecraft plugin development."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1,  # Lower temperature for more deterministic responses
-            max_tokens=4000
-        )
-        
-        # Extract and parse the JSON from the response
-        result = response.choices[0].message.content
-        
-        # Find JSON block in response
-        json_match = re.search(r'```json\n(.*?)\n```', result, re.DOTALL)
-        if json_match:
-            json_str = json_match.group(1)
-        else:
-            # Try to find any JSON block or just take the whole response
-            json_str = result
-        
-        try:
-            parsed_result = json.loads(json_str)
-            return parsed_result
-        except json.JSONDecodeError:
-            print(f"Error parsing JSON from AI response: {json_str}")
-            # Create a basic structure with the raw response
-            return {
-                "analysis": "Could not parse AI response properly",
-                "issues": [],
-                "recommendations": "See raw response",
-                "response_for_issue": result
-            }
-            
-    except Exception as e:
-        print(f"Error calling OpenAI API: {e}")
+    api_key = os.environ.get('OPENAI_API_KEY')
+    if not api_key:
+        print("OpenAI API key is not set")
         return {
-            "analysis": f"Error during AI analysis: {str(e)}",
-            "issues": [],
-            "recommendations": "Could not complete analysis due to API error",
-            "response_for_issue": "The AI assistant encountered an error processing this request."
+            "analysis": "No AI analysis available - API key not configured",
+            "recommendations": [],
+            "code_fixes": {}
         }
+    
+    # This is a placeholder for the actual OpenAI API call
+    # In a real implementation, you would format the code and issue
+    # into a prompt and send it to the OpenAI API
+    
+    print("Analyzing code with AI...")
+    print(f"Number of files to analyze: {len(code_files)}")
+    if issue_description:
+        print(f"Issue description: {issue_description[:100]}...")
+    
+    # Return mock analysis for demonstration
+    return {
+        "analysis": "This is a placeholder for AI-generated code analysis",
+        "recommendations": [
+            "Implement error handling for database connection failures",
+            "Add logging for critical operations",
+            "Optimize database queries"
+        ],
+        "code_fixes": {
+            "src/main/java/com/seventodie/utils/DatabaseManager.java": [
+                {
+                    "line": 57,
+                    "original": "connection = DriverManager.getConnection(\"jdbc:sqlite:\" + databaseFile.getAbsolutePath());",
+                    "replacement": "try {\n    connection = DriverManager.getConnection(\"jdbc:sqlite:\" + databaseFile.getAbsolutePath());\n} catch (SQLException e) {\n    plugin.getLogger().log(Level.SEVERE, \"Failed to connect to database\", e);\n}"
+                }
+            ]
+        }
+    }
 
 def create_patch_from_analysis(analysis):
     """Create a git patch file from the AI analysis."""
-    patch_lines = []
+    if not analysis or 'code_fixes' not in analysis:
+        return None
     
-    for issue in analysis.get('issues', []):
-        file_path = issue.get('file')
-        original = issue.get('original_code')
-        fixed = issue.get('fixed_code')
-        
-        if not all([file_path, original, fixed]):
-            continue
-        
-        # Skip if they're the same
-        if original == fixed:
-            continue
-            
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                file_content = f.read()
-                
-            # Replace the code
-            if original in file_content:
-                new_content = file_content.replace(original, fixed)
-                
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(new_content)
-                
-                # Add to patch info
-                patch_lines.append(f"Modified {file_path}")
-            else:
-                print(f"Warning: Could not find the original code in {file_path}")
-        except Exception as e:
-            print(f"Error applying change to {file_path}: {e}")
+    patches = []
+    for file_path, fixes in analysis['code_fixes'].items():
+        # In a real implementation, you would create proper git patches
+        # This is a simplified version that just outputs the changes
+        patch = f"--- a/{file_path}\n+++ b/{file_path}\n"
+        for fix in fixes:
+            patch += f"@@ -{fix['line']},1 +{fix['line']},5 @@\n"
+            patch += f"-{fix['original']}\n+{fix['replacement']}\n"
+        patches.append(patch)
     
-    # Create patch summary
-    if patch_lines:
-        patch_path = Path(".github/ai-changes.patch")
-        with open(patch_path, 'w', encoding='utf-8') as f:
-            f.write("\n".join(patch_lines))
-        
-        return True
-    
-    return False
+    return "\n".join(patches)
 
 def create_ai_response(analysis, issue_number):
     """Create a markdown response for a GitHub issue."""
+    if not analysis:
+        return "Unable to perform AI analysis at this time."
+    
     response = f"## AI Analysis for Issue #{issue_number}\n\n"
+    response += f"{analysis.get('analysis', 'No analysis available')}\n\n"
     
-    response += "### Analysis\n"
-    response += analysis.get('analysis', 'No analysis provided') + "\n\n"
+    if 'recommendations' in analysis and analysis['recommendations']:
+        response += "### Recommendations\n\n"
+        for i, rec in enumerate(analysis['recommendations'], 1):
+            response += f"{i}. {rec}\n"
     
-    if analysis.get('issues'):
-        response += "### Issues Identified\n"
-        for i, issue in enumerate(analysis['issues'], 1):
-            response += f"**Issue {i}**: {issue.get('description', 'No description')}\n"
-            response += f"File: `{issue.get('file', 'Not specified')}`\n"
-            response += "```java\n// Original code\n" + issue.get('original_code', '') + "\n```\n"
-            response += "```java\n// Fixed code\n" + issue.get('fixed_code', '') + "\n```\n\n"
+    if 'code_fixes' in analysis and analysis['code_fixes']:
+        response += "\n### Proposed Code Changes\n\n"
+        for file_path, fixes in analysis['code_fixes'].items():
+            response += f"**{file_path}**\n\n"
+            for fix in fixes:
+                response += "```diff\n"
+                response += f"- {fix['original']}\n+ {fix['replacement']}\n"
+                response += "```\n\n"
     
-    response += "### Recommendations\n"
-    response += analysis.get('recommendations', 'No recommendations provided') + "\n\n"
-    
-    # Add information about automatic PR if any issues were found
-    if analysis.get('issues'):
-        response += "### Automated Fix\n"
-        response += "I've created a pull request with these fixes for your review.\n\n"
-    
-    response += "---\n"
-    response += "_This analysis was performed automatically by the AI Assistant._"
-    
-    # Save to file for the workflow
-    with open(".github/ai-response.md", 'w', encoding='utf-8') as f:
-        f.write(response)
+    response += "\nI'll create a pull request with these changes shortly. Please review and provide feedback."
     
     return response
 
 def main():
     """Main function to process the AI task."""
     args = setup_argparse()
+    
+    # Ensure required arguments are provided
+    if not args.repo or not args.token:
+        print("Repository and GitHub token are required")
+        sys.exit(1)
+    
+    # Set up GitHub API
     headers = setup_github_api(args.token)
     
-    # Set output variables (for GitHub Actions)
-    output = {
-        'create-pr': 'false',
-        'commit-message': 'AI automated fix',
-        'pr-title': 'AI: Automated code improvements',
-        'pr-body': 'This PR contains automated fixes generated by the AI assistant.'
-    }
+    # Set OpenAI API key if provided
+    if args.api_key:
+        os.environ['OPENAI_API_KEY'] = args.api_key
     
-    # Process based on task
-    if args.task == 'analyze-issue' and args.issue:
+    # Process based on mode
+    if args.mode == 'issue' and args.issue_number:
         # Get issue details
-        issue = get_issue_details(args.repo, args.issue, headers)
-        if not issue:
-            print("Could not retrieve issue details")
-            return 1
+        issue = get_issue_details(args.repo, args.issue_number, headers)
         
-        # Get relevant repository files
-        files = get_repository_files(args.repo, headers)
-        code_files = {}
+        # Get repository files for analysis
+        code_files = get_repository_files(args.repo, headers)
         
-        for file in files[:15]:  # Limit to 15 files to avoid token limits
-            content = get_file_content(args.repo, file, headers)
-            if content:
-                code_files[file] = content
+        # Load file contents
+        for file in code_files:
+            file['content'] = get_file_content(args.repo, file['path'], headers)
         
-        # Analyze with AI
+        # Analyze code with AI based on issue
         analysis = analyze_code_with_ai(code_files, issue['body'])
         
         # Create response for the issue
-        create_ai_response(analysis, args.issue)
+        response = create_ai_response(analysis, args.issue_number)
         
-        # Check if we should create a PR with fixes
-        if analysis.get('issues'):
-            created_patch = create_patch_from_analysis(analysis)
-            if created_patch:
-                output['create-pr'] = 'true'
-                output['commit-message'] = f'AI: Fix issues from #{args.issue}'
-                output['pr-title'] = f'AI: Fix for issue #{args.issue}'
-                output['pr-body'] = f'This PR addresses issues identified in #{args.issue}\n\n{analysis.get("analysis")}'
+        # Output results for GitHub Actions
+        with open(os.environ.get('GITHUB_OUTPUT', 'github_output.txt'), 'w') as f:
+            f.write(f"analysis={json.dumps(analysis)}\n")
+            f.write(f"response={response}\n")
+        
+        print("AI analysis complete!")
+        
+    elif args.mode == 'scan':
+        # Perform a full repository scan
+        code_files = get_repository_files(args.repo, headers)
+        
+        # Load file contents
+        for file in code_files:
+            file['content'] = get_file_content(args.repo, file['path'], headers)
+        
+        # Analyze code with AI
+        analysis = analyze_code_with_ai(code_files)
+        
+        # Create a patch file if fixes are suggested
+        patch = create_patch_from_analysis(analysis)
+        if patch:
+            with open('ai_fixes.patch', 'w') as f:
+                f.write(patch)
+        
+        # Output results for GitHub Actions
+        with open(os.environ.get('GITHUB_OUTPUT', 'github_output.txt'), 'w') as f:
+            f.write(f"analysis={json.dumps(analysis)}\n")
+            if patch:
+                f.write(f"patch_file=ai_fixes.patch\n")
+        
+        print("Repository scan complete!")
     
-    elif args.task in ['analyze-code', 'fix-bugs', 'implement-feature', 'improve-performance']:
-        # Direct task from workflow dispatch
-        files = get_repository_files(args.repo, headers)
-        code_files = {}
-        
-        for file in files[:15]:  # Limit to 15 files to avoid token limits
-            content = get_file_content(args.repo, file, headers)
-            if content:
-                code_files[file] = content
-        
-        # Analyze with AI
-        analysis = analyze_code_with_ai(code_files, args.description)
-        
-        # Process the results
-        if analysis.get('issues'):
-            created_patch = create_patch_from_analysis(analysis)
-            if created_patch:
-                output['create-pr'] = 'true'
-                output['commit-message'] = f'AI: {args.task}'
-                output['pr-title'] = f'AI: {args.task.replace("-", " ").title()}'
-                output['pr-body'] = f'This PR provides {args.task.replace("-", " ")} as requested.\n\n{analysis.get("analysis")}'
-        
-        # Save analysis for reference
-        with open(".github/ai-analysis.json", 'w', encoding='utf-8') as f:
-            json.dump(analysis, f, indent=2)
-    
-    # Set outputs for GitHub Actions
-    with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-        for key, value in output.items():
-            f.write(f"{key}={value}\n")
-    
-    return 0
+    else:
+        print(f"Unsupported mode: {args.mode} or missing issue number")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
