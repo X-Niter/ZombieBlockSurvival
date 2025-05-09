@@ -2,7 +2,7 @@
 
 A comprehensive Minecraft server plugin that recreates 7 Days To Die gameplay mechanics on Paper 1.21.4.
 
-> 🤖 **AI-Powered Development**: This project uses AI-powered workflows to automatically analyze code, fix bugs, and implement features. [Learn more](.github/AI_DEVELOPMENT.md)
+> 🤖 **Fully Autonomous Development**: This project uses an AI-powered autonomous development system that works 24/7 to analyze, fix, and improve code with minimal human intervention. [Learn how it works](.github/AI_DEVELOPMENT.md)
 
 ## Features
 
@@ -13,51 +13,55 @@ A comprehensive Minecraft server plugin that recreates 7 Days To Die gameplay me
 - **Structure Generation**: Custom structures in the world
 - **Specialized Tools**: Tools designed for the building system
 
+## Autonomous Development
+
+This project features a revolutionary development approach where AI actively maintains and enhances the code while you focus on creative decisions.
+
+### How It Works
+
+1. **You Create Issues**: Just describe bugs, features, or improvements as GitHub issues
+2. **AI Responds Naturally**: The system processes your issue and responds like a human developer
+3. **Autonomous Implementation**: The AI analyzes, codes, tests, and creates pull requests
+4. **You Review Changes**: You maintain control by reviewing and approving PRs
+5. **Continuous Improvement**: The system proactively improves the codebase even while you sleep
+
+### AI Commands
+
+You can direct the AI using commands in issue comments:
+
+| Command | Description |
+|---------|-------------|
+| `/ai fix` | Request a bug fix |
+| `/ai implement` | Request a feature implementation |
+| `/ai analyze` | Request detailed analysis |
+| `/ai status` | Check implementation status |
+| `/ai help` | Show all available commands |
+
+### Asynchronous Development
+
+The autonomous system works continuously:
+- It can develop while you're away
+- It handles routine maintenance and testing
+- It proactively suggests improvements
+- It responds to community issues and PRs
+
+Learn more about this system in the [AI Development Guide](.github/AI_DEVELOPMENT.md).
+
 ## Development Setup
 
-This project is configured for easy development using GitHub workflows.
+### Setting Up Autonomous Development
+
+1. Clone this repository
+2. [Add the OpenAI API key](.github/AI_DEVELOPMENT.md#setup) to your repository secrets
+3. Create an issue to begin interacting with the AI
 
 ### Building with GitHub Actions
 
-The plugin is automatically built when changes are pushed to the repository. You can view the build status and results in the "Actions" tab of the GitHub repository.
+The plugin is automatically built when changes are pushed. You can view build results in the "Actions" tab.
 
-### AI-Powered Development Dashboard
+### Local Development Setup
 
-This project includes a user-friendly web dashboard for AI-powered development:
-
-1. After setting up your repository, visit the GitHub Pages site: `https://your-username.github.io/SevenToDie/`
-2. Authenticate with a GitHub personal access token
-3. Use the dashboard to:
-   - Trigger AI analysis, bug fixes, and feature implementation
-   - Create issues that get automatically analyzed by AI
-   - Track the status of AI-driven development tasks
-   - Monitor the overall health of your project
-
-For setup instructions, see the [Setup Guide](https://your-username.github.io/SevenToDie/setup) on the dashboard.
-
-### Interactive Development Environment
-
-You can create an on-demand development environment right in GitHub Actions:
-
-1. Go to the "Actions" tab in your GitHub repository
-2. Select the "Development Environment" workflow
-3. Click "Run workflow" 
-4. Configure options:
-   - Set development session duration (60-240 minutes)
-   - Choose whether to automatically start a Paper server
-5. Click "Run workflow"
-6. When the workflow reaches the Tmate step, follow the SSH connection instructions
-7. Once connected, you can:
-   - Build the plugin: `./build.sh`
-   - Start the server (if not auto-started): `./server.sh`
-   - Edit code using terminal-based editors like nano or vim
-   - Use screen/tmux for multiple terminal sessions
-
-This gives you a complete development environment without needing to install anything locally.
-
-## Local Development Setup
-
-If you prefer local development:
+If you prefer local development alongside the AI:
 
 1. Install JDK 21
 2. Clone this repository
@@ -75,14 +79,25 @@ If you prefer local development:
   - `traders/`: Trading system
   - `utils/`: Utility classes
   - `worldgen/`: World generation
+- `.github/`: Autonomous development system
+  - `workflows/`: AI workflow definitions
+  - `scripts/`: AI processing scripts
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b my-new-feature`
-3. Commit your changes: `git commit -am 'Add some feature'`
-4. Push to the branch: `git push origin my-new-feature`
-5. Submit a pull request
+You can contribute in two ways:
+
+1. **Direct Development**:
+   - Fork the repository
+   - Create a feature branch: `git checkout -b my-new-feature`
+   - Commit your changes: `git commit -am 'Add some feature'`
+   - Push to the branch: `git push origin my-new-feature`
+   - Submit a pull request
+
+2. **AI-Assisted Development**:
+   - Create a detailed issue describing what you want to add or fix
+   - The AI will assist you or implement it for you
+   - Review and approve the AI-generated pull request
 
 ## License
 
