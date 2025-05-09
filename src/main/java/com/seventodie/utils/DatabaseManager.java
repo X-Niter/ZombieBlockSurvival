@@ -51,24 +51,157 @@ public class DatabaseManager {
         // Set up database file
         databaseFile = new File(databaseDir, "seventodie.db");
         
+        // Check for SQLite libraries first
+        boolean sqliteAvailable = checkSQLiteAvailability();
+        if (!sqliteAvailable) {
+            plugin.getLogger().warning("SQLite library test failed. The plugin will continue in memory-only mode.");
+            return;
+        }
+        
         // Initialize database connection
         try {
-            Class.forName("org.sqlite.JDBC");
+            // Extract and configure native libraries
+            extractNativeLibraries();
+            
+            // Try connecting to the actual database file
             connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFile.getAbsolutePath());
             
-            // Create tables if they don't exist
-            createTables();
-            
-            plugin.getLogger().info("Database initialized successfully");
-        } catch (ClassNotFoundException e) {
-            plugin.getLogger().severe("SQLite JDBC driver not found!");
-            plugin.getLogger().warning("The plugin will continue without database support.");
+            // Verify connection works with a simple query
+            if (verifyConnection()) {
+                // Create tables if they don't exist
+                createTables();
+                plugin.getLogger().info("Database initialized successfully");
+            } else {
+                plugin.getLogger().severe("Database connection verification failed.");
+                plugin.getLogger().warning("The plugin will continue in memory-only mode without persistence.");
+            }
         } catch (UnsatisfiedLinkError e) {
             plugin.getLogger().severe("Failed to load SQLite native library: " + e.getMessage());
             plugin.getLogger().warning("The plugin will continue in memory-only mode without persistence.");
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to initialize database", e);
             plugin.getLogger().warning("The plugin will continue without database support.");
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Unexpected error during database initialization", e);
+            plugin.getLogger().warning("The plugin will continue in memory-only mode due to an unexpected error.");
+        }
+    }
+    
+    /**
+     * Check if SQLite libraries are available and working
+     * 
+     * @return true if SQLite is available, false otherwise
+     */
+    private boolean checkSQLiteAvailability() {
+        try {
+            // Try with the relocated package first (after Maven Shade plugin relocation)
+            try {
+                Class.forName("com.seventodie.lib.sqlite.JDBC");
+                plugin.getLogger().info("Using relocated SQLite JDBC driver (com.seventodie.lib.sqlite.JDBC)");
+                return testSQLiteConnection("com.seventodie.lib.sqlite.JDBC");
+            } catch (ClassNotFoundException e) {
+                // Try with the original package
+                plugin.getLogger().info("Relocated SQLite driver not found, trying original package");
+                Class.forName("org.sqlite.JDBC");
+                plugin.getLogger().info("Using original SQLite JDBC driver (org.sqlite.JDBC)");
+                return testSQLiteConnection("org.sqlite.JDBC");
+            }
+        } catch (ClassNotFoundException e) {
+            plugin.getLogger().severe("SQLite JDBC driver not found in any package");
+            return false;
+        } catch (SQLException | UnsatisfiedLinkError e) {
+            plugin.getLogger().log(Level.SEVERE, "SQLite availability check failed", e);
+            return false;
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Unexpected error during SQLite check", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Test SQLite connection using the specified driver class
+     * 
+     * @param driverClass The JDBC driver class to use
+     * @return true if connection works, false otherwise
+     */
+    private boolean testSQLiteConnection(String driverClass) throws SQLException {
+        // Extract SQLite native libraries if needed
+        extractNativeLibraries();
+        
+        // Try connecting to an in-memory database
+        try (Connection testConn = DriverManager.getConnection("jdbc:sqlite::memory:")) {
+            try (Statement stmt = testConn.createStatement()) {
+                // Simple test query
+                stmt.execute("CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY)");
+                stmt.execute("DROP TABLE IF EXISTS test_table");
+                return true;
+            }
+        }
+    }
+    
+    /**
+     * Extract SQLite native libraries to plugin data folder
+     */
+    private void extractNativeLibraries() {
+        try {
+            // Get OS name and architecture
+            String osName = System.getProperty("os.name").toLowerCase();
+            String osArch = System.getProperty("os.arch").toLowerCase();
+            
+            // Determine library filename based on OS
+            String libFilename = null;
+            if (osName.contains("win")) {
+                libFilename = osArch.contains("64") ? "sqlite-native-win-x64.dll" : "sqlite-native-win-x86.dll";
+            } else if (osName.contains("mac") || osName.contains("darwin")) {
+                libFilename = "libsqlite-native-mac.dylib";
+            } else if (osName.contains("linux") || osName.contains("unix")) {
+                libFilename = osArch.contains("64") ? "libsqlite-native-linux-x64.so" : "libsqlite-native-linux-x86.so";
+            }
+            
+            if (libFilename == null) {
+                plugin.getLogger().warning("Unsupported OS/architecture for SQLite native library: " + osName + " " + osArch);
+                return;
+            }
+            
+            // Create libs directory
+            File libsDir = new File(plugin.getDataFolder(), "libs");
+            if (!libsDir.exists()) {
+                libsDir.mkdirs();
+            }
+            
+            // Set system properties for SQLite JDBC
+            System.setProperty("org.sqlite.lib.path", libsDir.getAbsolutePath());
+            System.setProperty("org.sqlite.lib.name", libFilename);
+            
+            // Also set for relocated package
+            System.setProperty("com.seventodie.lib.sqlite.lib.path", libsDir.getAbsolutePath());
+            System.setProperty("com.seventodie.lib.sqlite.lib.name", libFilename);
+            
+            plugin.getLogger().info("Set SQLite native library path to: " + libsDir.getAbsolutePath());
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Failed to extract SQLite native libraries", e);
+        }
+    }
+    
+    /**
+     * Verify connection works with a simple query
+     * 
+     * @return true if connection verification succeeded
+     */
+    private boolean verifyConnection() {
+        if (connection == null) {
+            return false;
+        }
+        
+        try {
+            try (Statement stmt = connection.createStatement()) {
+                try (ResultSet rs = stmt.executeQuery("SELECT 1")) {
+                    return rs.next();
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "Connection verification failed", e);
+            return false;
         }
     }
     
