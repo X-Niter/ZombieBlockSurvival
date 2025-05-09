@@ -47,10 +47,10 @@ jobs:
 
     - name: Configure GitHub CLI
       run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" > gh_token.txt
-        gh auth login --with-token < gh_token.txt
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # GitHub CLI already has access to GITHUB_TOKEN by default in GitHub Actions
+        # Make sure environment doesn't have conflicting auth method
+        unset GITHUB_TOKEN
+        gh auth status || gh auth login --with-token < <(echo "${{ secrets.GITHUB_TOKEN }}")
 
     - name: Determine AI task
       id: determine-task
@@ -71,12 +71,18 @@ jobs:
     - name: Process with AI
       id: process-ai
       run: |
+        # Create a temporary token file to avoid environment variable conflicts
+        echo "${{ secrets.GITHUB_TOKEN }}" > .github_token.txt
+        
         python .github/scripts/ai_processor.py \
           --task ${{ steps.determine-task.outputs.task }} \
           --repo ${{ github.repository }} \
-          --token ${{ secrets.GITHUB_TOKEN }} \
+          --token-file .github_token.txt \
           --issue ${{ github.event.issue.number || '' }} \
           --description "${{ github.event.inputs.description || github.event.issue.body || '' }}"
+          
+        # Clean up token file
+        rm -f .github_token.txt
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
@@ -104,8 +110,7 @@ jobs:
         gh pr create --title "${{ steps.process-ai.outputs.pr-title }}" \
                     --body "${{ steps.process-ai.outputs.pr-body }}" \
                     --base main
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # GitHub CLI already has access to GITHUB_TOKEN in Actions environment
 
     - name: Add AI comment to issue
       if: github.event_name == 'issues' || github.event_name == 'issue_comment'
@@ -113,5 +118,4 @@ jobs:
         if [ -f ".github/ai-response.md" ]; then
           gh issue comment ${{ github.event.issue.number }} --body-file .github/ai-response.md
         fi
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # GitHub CLI already has access to GITHUB_TOKEN in Actions environment

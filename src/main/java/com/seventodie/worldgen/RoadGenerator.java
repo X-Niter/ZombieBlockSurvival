@@ -268,12 +268,19 @@ public class RoadGenerator {
     private int getHighestBlockYAt(World world, int x, int z) {
         for (int y = world.getMaxHeight() - 1; y >= 0; y--) {
             Block block = world.getBlockAt(x, y, z);
-            if (!block.getType().equals(Material.AIR) && 
-                !block.getType().isLiquid() &&
-                !block.getType().equals(Material.LEAVES) &&
-                !block.getType().equals(Material.OAK_LEAVES) &&
-                !block.getType().equals(Material.BIRCH_LEAVES) &&
-                !block.getType().equals(Material.SPRUCE_LEAVES)) {
+            Material type = block.getType();
+            if (!type.equals(Material.AIR) && 
+                !type.equals(Material.WATER) &&
+                !type.equals(Material.LAVA) &&
+                !type.equals(Material.OAK_LEAVES) &&
+                !type.equals(Material.BIRCH_LEAVES) &&
+                !type.equals(Material.SPRUCE_LEAVES) &&
+                !type.equals(Material.DARK_OAK_LEAVES) &&
+                !type.equals(Material.ACACIA_LEAVES) &&
+                !type.equals(Material.JUNGLE_LEAVES) &&
+                !type.equals(Material.AZALEA_LEAVES) &&
+                !type.equals(Material.FLOWERING_AZALEA_LEAVES) &&
+                !type.name().endsWith("LEAVES")) {
                 return y + 1;
             }
         }
@@ -334,6 +341,8 @@ public class RoadGenerator {
                            int chunkX, int chunkZ, ChunkGenerator.ChunkData chunkData) {
         // This would be called from a chunk generator override
         // Use the methods above to generate roads in the chunk data
-        generateRoadsInChunk(worldInfo.getWorld(), chunkX, chunkZ);
+        // WorldInfo doesn't have getWorld() in Paper 1.21, so we need a World parameter to be passed in
+        // This is a placeholder that would be implemented in the actual chunk generator
+        // generateRoadsInChunk(world, chunkX, chunkZ);
     }
 }

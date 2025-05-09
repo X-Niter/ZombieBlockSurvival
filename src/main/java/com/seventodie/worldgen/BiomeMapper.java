@@ -1,6 +1,7 @@
 package com.seventodie.worldgen;
 
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.bukkit.Bukkit;
@@ -23,7 +24,7 @@ public class BiomeMapper implements Listener {
     private final SevenToDiePlugin plugin;
     
     // Mapping between Minecraft biomes and 7DtD equivalents
-    private final Map<Biome, SevenBiome> biomeMapping = new EnumMap<>(Biome.class);
+    private final Map<Biome, SevenBiome> biomeMapping = new HashMap<>();
     
     /**
      * 7 Days to Die biome equivalents
@@ -82,7 +83,7 @@ public class BiomeMapper implements Listener {
         biomeMapping.put(Biome.FOREST, SevenBiome.FOREST);
         biomeMapping.put(Biome.BIRCH_FOREST, SevenBiome.FOREST);
         biomeMapping.put(Biome.DARK_FOREST, SevenBiome.FOREST);
-        biomeMapping.put(Biome.WOODED_HILLS, SevenBiome.FOREST);
+        biomeMapping.put(Biome.OLD_GROWTH_BIRCH_FOREST, SevenBiome.FOREST);
         biomeMapping.put(Biome.JUNGLE, SevenBiome.FOREST);
         
         // Grassland biomes
@@ -93,21 +94,21 @@ public class BiomeMapper implements Listener {
         
         // Desert biomes
         biomeMapping.put(Biome.DESERT, SevenBiome.DESERT);
-        biomeMapping.put(Biome.DESERT_HILLS, SevenBiome.DESERT);
+        biomeMapping.put(Biome.WINDSWEPT_HILLS, SevenBiome.DESERT);
         biomeMapping.put(Biome.BADLANDS, SevenBiome.DESERT);
-        biomeMapping.put(Biome.BADLANDS_PLATEAU, SevenBiome.DESERT);
+        biomeMapping.put(Biome.WOODED_BADLANDS, SevenBiome.DESERT);
         biomeMapping.put(Biome.ERODED_BADLANDS, SevenBiome.DESERT);
         
         // Snow biomes
-        biomeMapping.put(Biome.SNOWY_TUNDRA, SevenBiome.SNOW);
-        biomeMapping.put(Biome.SNOWY_MOUNTAINS, SevenBiome.SNOW);
+        biomeMapping.put(Biome.SNOWY_PLAINS, SevenBiome.SNOW);
+        biomeMapping.put(Biome.SNOWY_SLOPES, SevenBiome.SNOW);
         biomeMapping.put(Biome.SNOWY_TAIGA, SevenBiome.SNOW);
-        biomeMapping.put(Biome.SNOWY_TAIGA_HILLS, SevenBiome.SNOW);
+        biomeMapping.put(Biome.GROVE, SevenBiome.SNOW);
         biomeMapping.put(Biome.ICE_SPIKES, SevenBiome.SNOW);
         
         // Wasteland biomes
         biomeMapping.put(Biome.BADLANDS, SevenBiome.WASTELAND);
-        biomeMapping.put(Biome.BADLANDS_PLATEAU, SevenBiome.WASTELAND);
+        biomeMapping.put(Biome.WOODED_BADLANDS, SevenBiome.WASTELAND);
         biomeMapping.put(Biome.ERODED_BADLANDS, SevenBiome.WASTELAND);
         biomeMapping.put(Biome.NETHER_WASTES, SevenBiome.WASTELAND);
         biomeMapping.put(Biome.SOUL_SAND_VALLEY, SevenBiome.WASTELAND);

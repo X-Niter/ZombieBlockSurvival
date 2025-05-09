@@ -8,11 +8,26 @@ import java.util.UUID;
  * Represents a frame block that can be upgraded
  */
 public class FrameBlock {
+    /** Wood tier constant (tier 0) */
+    public static final int TIER_WOOD = 0;
+    
+    /** Stone tier constant (tier 1) */
+    public static final int TIER_STONE = 1;
+    
+    /** Metal/Rebar tier constant (tier 2) */
+    public static final int TIER_REBAR = 2;
+    
+    /** Concrete tier constant (tier 3) */
+    public static final int TIER_CONCRETE = 3;
     
     private final Location location;
     private final UUID ownerUuid;
     private int tier;
     private long lastUpgrade;
+    private int durability;
+    private int maxDurability;
+    private int upgradeProgress;
+    private int upgradeRequirement;
     
     /**
      * Constructor for a FrameBlock
@@ -89,14 +104,24 @@ public class FrameBlock {
      * @return The material name
      */
     public String getTierName() {
-        switch (tier) {
-            case 0:
+        return getTierName(tier);
+    }
+    
+    /**
+     * Get the material name for a specific tier (static)
+     * 
+     * @param tierLevel The tier level
+     * @return The material name
+     */
+    public static String getTierName(int tierLevel) {
+        switch (tierLevel) {
+            case TIER_WOOD:
                 return "Wood";
-            case 1:
+            case TIER_STONE:
                 return "Stone";
-            case 2:
+            case TIER_REBAR:
                 return "Metal";
-            case 3:
+            case TIER_CONCRETE:
                 return "Concrete";
             default:
                 return "Unknown";
@@ -121,5 +146,86 @@ public class FrameBlock {
             default:
                 return 100;
         }
+    }
+    
+    /**
+     * Get the current durability of the block
+     * 
+     * @return The current durability
+     */
+    public int getDurability() {
+        return durability;
+    }
+    
+    /**
+     * Set the current durability of the block
+     * 
+     * @param durability The new durability value
+     */
+    public void setDurability(int durability) {
+        this.durability = durability;
+    }
+    
+    /**
+     * Get the maximum durability of the block
+     * 
+     * @return The maximum durability
+     */
+    public int getMaxDurability() {
+        return maxDurability;
+    }
+    
+    /**
+     * Set the maximum durability of the block
+     * 
+     * @param maxDurability The new maximum durability value
+     */
+    public void setMaxDurability(int maxDurability) {
+        this.maxDurability = maxDurability;
+    }
+    
+    /**
+     * Get the current upgrade progress
+     * 
+     * @return The current upgrade progress
+     */
+    public int getUpgradeProgress() {
+        return upgradeProgress;
+    }
+    
+    /**
+     * Set the current upgrade progress
+     * 
+     * @param upgradeProgress The new upgrade progress value
+     */
+    public void setUpgradeProgress(int upgradeProgress) {
+        this.upgradeProgress = upgradeProgress;
+    }
+    
+    /**
+     * Get the upgrade requirement (materials needed)
+     * 
+     * @return The upgrade requirement
+     */
+    public int getUpgradeRequirement() {
+        return upgradeRequirement;
+    }
+    
+    /**
+     * Set the upgrade requirement
+     * 
+     * @param upgradeRequirement The new upgrade requirement value
+     */
+    public void setUpgradeRequirement(int upgradeRequirement) {
+        this.upgradeRequirement = upgradeRequirement;
+    }
+    
+    /**
+     * Get the block type (for display in UI)
+     * 
+     * @return The block type
+     */
+    public String getType() {
+        return "Frame";
     }
 }

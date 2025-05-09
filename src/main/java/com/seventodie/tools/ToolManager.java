@@ -127,7 +127,7 @@ public class ToolManager {
         meta.getPersistentDataContainer().set(MAX_TIER_KEY, PersistentDataType.INTEGER, toolMaxTiers.get(STONE_HAMMER));
         
         // Add decorative enchant glow
-        meta.addEnchant(Enchantment.DURABILITY, 1, true);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         
         hammer.setItemMeta(meta);
@@ -157,7 +157,7 @@ public class ToolManager {
         meta.getPersistentDataContainer().set(MAX_TIER_KEY, PersistentDataType.INTEGER, toolMaxTiers.get(IRON_HAMMER));
         
         // Add decorative enchant glow
-        meta.addEnchant(Enchantment.DURABILITY, 1, true);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         
         hammer.setItemMeta(meta);
@@ -187,7 +187,7 @@ public class ToolManager {
         meta.getPersistentDataContainer().set(MAX_TIER_KEY, PersistentDataType.INTEGER, toolMaxTiers.get(STEEL_HAMMER));
         
         // Add decorative enchant glow
-        meta.addEnchant(Enchantment.DURABILITY, 1, true);
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         
         hammer.setItemMeta(meta);

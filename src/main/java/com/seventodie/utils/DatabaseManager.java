@@ -62,8 +62,13 @@ public class DatabaseManager {
             plugin.getLogger().info("Database initialized successfully");
         } catch (ClassNotFoundException e) {
             plugin.getLogger().severe("SQLite JDBC driver not found!");
+            plugin.getLogger().warning("The plugin will continue without database support.");
+        } catch (UnsatisfiedLinkError e) {
+            plugin.getLogger().severe("Failed to load SQLite native library: " + e.getMessage());
+            plugin.getLogger().warning("The plugin will continue in memory-only mode without persistence.");
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to initialize database", e);
+            plugin.getLogger().warning("The plugin will continue without database support.");
         }
     }
     
@@ -154,9 +159,23 @@ public class DatabaseManager {
         try {
             if (connection != null && !connection.isClosed()) {
                 connection.close();
+                plugin.getLogger().info("Database connection closed");
             }
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Error closing database connection", e);
+        }
+    }
+    
+    /**
+     * Check if the database connection is available
+     * 
+     * @return true if the connection is available, false otherwise
+     */
+    public boolean isConnectionAvailable() {
+        try {
+            return connection != null && !connection.isClosed();
+        } catch (SQLException e) {
+            return false;
         }
     }
     
@@ -176,6 +195,11 @@ public class DatabaseManager {
     public boolean saveStructure(UUID id, String type, Location location, 
                                double sizeX, double sizeY, double sizeZ, 
                                String schematic, int rotation) {
+        if (!isConnectionAvailable()) {
+            plugin.getLogger().warning("Database connection not available. Structure could not be saved.");
+            return false;
+        }
+                               
         String sql = "INSERT OR REPLACE INTO " + TABLE_STRUCTURES + 
                      " (id, type, world, x, y, z, size_x, size_y, size_z, schematic, rotation) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -216,6 +240,11 @@ public class DatabaseManager {
     public boolean saveQuest(UUID id, String title, String description, 
                            String targetType, int targetAmount, Location location, 
                            UUID structureId, boolean completed) {
+        if (!isConnectionAvailable()) {
+            plugin.getLogger().warning("Database connection not available. Quest could not be saved.");
+            return false;
+        }
+                           
         String sql = "INSERT OR REPLACE INTO " + TABLE_QUESTS + 
                      " (id, title, description, target_type, target_amount, " +
                      "world, x, y, z, structure_id, completed) " +
@@ -251,6 +280,11 @@ public class DatabaseManager {
      * @return True if the operation was successful
      */
     public boolean saveTrader(UUID id, String name, Location location, UUID structureId) {
+        if (!isConnectionAvailable()) {
+            plugin.getLogger().warning("Database connection not available. Trader could not be saved.");
+            return false;
+        }
+        
         String sql = "INSERT OR REPLACE INTO " + TABLE_TRADERS + 
                      " (id, name, world, x, y, z, structure_id) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -280,6 +314,11 @@ public class DatabaseManager {
      * @return True if the operation was successful
      */
     public boolean savePlayerQuestProgress(UUID playerId, UUID questId, int progress) {
+        if (!isConnectionAvailable()) {
+            plugin.getLogger().warning("Database connection not available. Quest progress could not be saved.");
+            return false;
+        }
+        
         String sql = "INSERT OR REPLACE INTO " + TABLE_PLAYER_QUESTS + 
                      " (player_id, quest_id, progress) " +
                      "VALUES (?, ?, ?)";
@@ -307,6 +346,11 @@ public class DatabaseManager {
      * @return True if the operation was successful
      */
     public boolean saveFrameBlock(String world, int x, int y, int z, int tier) {
+        if (!isConnectionAvailable()) {
+            plugin.getLogger().warning("Database connection not available. Frame block could not be saved.");
+            return false;
+        }
+        
         String sql = "INSERT OR REPLACE INTO " + TABLE_FRAME_BLOCKS + 
                      " (world, x, y, z, tier) " +
                      "VALUES (?, ?, ?, ?, ?)";
@@ -335,6 +379,11 @@ public class DatabaseManager {
      * @return True if the operation was successful
      */
     public boolean deleteFrameBlock(String world, int x, int y, int z) {
+        if (!isConnectionAvailable()) {
+            plugin.getLogger().warning("Database connection not available. Frame block could not be deleted.");
+            return false;
+        }
+        
         String sql = "DELETE FROM " + TABLE_FRAME_BLOCKS + 
                      " WHERE world = ? AND x = ? AND y = ? AND z = ?";
         

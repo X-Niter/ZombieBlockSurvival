@@ -106,6 +106,65 @@ public class StructureManager {
     }
     
     /**
+     * Schedule structures to be placed around a road node
+     * 
+     * @param world The world
+     * @param x The x coordinate
+     * @param z The z coordinate
+     * @param radius The radius to check
+     */
+    public void scheduleStructuresAroundNode(World world, int x, int z, int radius) {
+        // This method is called from RoadGenerator
+        // Place random structures around the road node
+        int structureCount = 1 + random.nextInt(3); // 1-3 structures per node
+        
+        for (int i = 0; i < structureCount; i++) {
+            // Choose a random offset
+            int offsetX = random.nextInt(radius * 2) - radius;
+            int offsetZ = random.nextInt(radius * 2) - radius;
+            
+            // Don't place structures too close to the road
+            if (Math.abs(offsetX) < 5 && Math.abs(offsetZ) < 5) {
+                continue;
+            }
+            
+            int structureX = x + offsetX;
+            int structureZ = z + offsetZ;
+            
+            // Get y level for structure
+            int y = getHighestBlockYAt(world, structureX, structureZ);
+            
+            // Choose a random structure type
+            StructureType type = StructureType.values()[random.nextInt(StructureType.values().length)];
+            
+            // Random rotation (0-3)
+            int rotation = random.nextInt(4);
+            
+            // Place the structure
+            placeRandomStructure(world, structureX, y, structureZ, type, rotation);
+        }
+    }
+    
+    /**
+     * Get the highest solid block Y coordinate at the given position
+     * 
+     * @param world The world
+     * @param x The x coordinate
+     * @param z The z coordinate
+     * @return The y coordinate of the highest solid block
+     */
+    private int getHighestBlockYAt(World world, int x, int z) {
+        // Find the highest non-air block
+        for (int y = world.getMaxHeight() - 1; y >= 0; y--) {
+            Block block = world.getBlockAt(x, y, z);
+            if (!block.getType().isAir()) {
+                return y + 1;
+            }
+        }
+        return 64; // Default if nothing is found
+    }
+    
+    /**
      * Represents a structure in the world
      */
     public static class Structure {

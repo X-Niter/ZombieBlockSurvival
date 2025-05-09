@@ -151,7 +151,7 @@ public class FrameCommand extends BaseCommand {
         }
         
         player.sendMessage(ChatColor.GOLD + "===== Frame Block Info =====");
-        player.sendMessage(ChatColor.YELLOW + "Type: " + ChatColor.WHITE + frameBlock.getType().name().toLowerCase());
+        player.sendMessage(ChatColor.YELLOW + "Type: " + ChatColor.WHITE + frameBlock.getType());
         player.sendMessage(ChatColor.YELLOW + "Durability: " + ChatColor.WHITE + frameBlock.getDurability() + 
                          "/" + frameBlock.getMaxDurability());
         

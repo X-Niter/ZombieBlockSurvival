@@ -343,6 +343,30 @@ public class TraderManager {
     }
     
     /**
+     * Clean up resources when the plugin is disabled
+     */
+    public void cleanup() {
+        // Cancel scheduled tasks
+        if (outpostTask != null) {
+            outpostTask.cancel();
+        }
+        
+        // Save data
+        saveTraders();
+        
+        // Remove NPCs
+        for (TraderNPC trader : traders.values()) {
+            if (trader.getEntity() != null && trader.getEntity().isValid()) {
+                trader.getEntity().remove();
+            }
+        }
+        
+        // Clear collections
+        traders.clear();
+        outposts.clear();
+    }
+    
+    /**
      * Represents a trader outpost
      */
     public class TraderOutpost {
