@@ -84,9 +84,9 @@ public class SevenToDiePlugin extends JavaPlugin {
     if (databaseManager.initialize()) {
       getLogger().info("Database initialized successfully");
     } else {
-      // Database initialization failed but we can continue 
-      // in limited functionality mode with in-memory data
-      getLogger().warning("Database initialization failed. Plugin will run with limited functionality.");
+      // Database initialization failed but we can continue with memory-only mode
+      getLogger().warning("Database initialization failed.");
+      getLogger().warning("Plugin will run with limited functionality.");
       getLogger().warning("Data will not be persisted between server restarts.");
     }
     

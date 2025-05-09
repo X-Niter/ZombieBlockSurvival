@@ -61,9 +61,18 @@ public class DatabaseManager {
     }
     
     /**
-     * Initialize the database
+     * Initializes the database connection with multi-layered fallback mechanisms.
      * 
-     * @return true if connected to a persistent database, false if in memory/limited mode
+     * This method implements a cascading fallback strategy:
+     * 1. First attempts to connect using the relocated SQLite JDBC driver with native libraries
+     * 2. If that fails, attempts to use the original SQLite JDBC driver
+     * 3. If both SQLite approaches fail, falls back to pure Java H2 database
+     * 4. As a last resort, operates in memory-only mode with no persistence
+     * 
+     * This approach ensures the plugin can function across diverse environments
+     * and prioritizes plugin functionality over data persistence.
+     * 
+     * @return true if connected to a persistent database, false if in memory-only mode
      */
     public boolean initialize() {
         try {
@@ -183,7 +192,16 @@ public class DatabaseManager {
     }
     
     /**
-     * Initialize with in-memory fallback mode (no persistence)
+     * Initializes the database using pure Java in-memory fallback modes.
+     * Used when both SQLite initialization methods have failed, typically
+     * due to native library issues or permission problems.
+     * 
+     * This method implements two levels of fallback:
+     * 1. First tries H2 database in pure Java mode (shaded version)
+     * 2. Then tries regular H2 database if present in the classpath
+     * 3. Finally defaults to no database with in-memory flag set
+     * 
+     * @return true if any in-memory database initialization succeeded, false otherwise
      */
     private boolean initializeWithFallbackMode() {
         try {
@@ -399,14 +417,18 @@ public class DatabaseManager {
     }
     
     /**
-     * Verify connection works with a simple query
+     * Verifies the database connection works by executing a simple query.
+     * This method adds special handling for in-memory mode where we don't have 
+     * a real database connection but still need the plugin to function.
      * 
-     * @return true if connection verification succeeded
+     * @return true if connection verification succeeded or if we're in in-memory 
+     *         mode (which simulates a working connection), false otherwise
      */
     private boolean verifyConnection() {
         // If no connection, we can't verify
         if (connection == null) {
             // In our "null connection" mode, pretend verification succeeded
+            // This allows the plugin to continue functioning without a database
             if (inMemoryMode) {
                 return true;
             }
@@ -539,9 +561,15 @@ public class DatabaseManager {
     }
     
     /**
-     * Creates a dummy no-op database connection that supports our basic operations
-     * but doesn't actually persist data. This is used as a final fallback when
-     * all other database initialization approaches fail.
+     * Creates a dummy no-op database connection as a last resort fallback mechanism.
+     * This method implements multiple layers of fallback:
+     * 1. First tries to use the shaded H2 database driver
+     * 2. Then tries the system H2 database driver if available
+     * 3. Finally falls back to a null connection with in-memory mode flag set
+     * 
+     * The in-memory mode flag allows the plugin to function without a database by
+     * signaling to the rest of the code that persistent storage isn't available.
+     * This approach prioritizes plugin functionality over data persistence.
      */
     private void createDummyConnection() {
         try {

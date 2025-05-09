@@ -9,8 +9,9 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.ChatColor;
 import org.bukkit.NamespacedKey;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import com.seventodie.SevenToDiePlugin;
 
@@ -93,7 +94,7 @@ public class BlockManager {
             FrameBlock frameBlock = new FrameBlock(block.getLocation(), tier, player.getUniqueId());
             blocks.put(block.getLocation(), frameBlock);
             
-            player.sendMessage(ChatColor.GREEN + "Placed a frame block (tier " + tier + ")");
+            player.sendMessage(Component.text("Placed a frame block (tier " + tier + ")", NamedTextColor.GREEN));
             return true;
         }
         
@@ -153,7 +154,7 @@ public class BlockManager {
             
             // Try to upgrade the block
             if (tryUpgradeBlock(frameBlock, material)) {
-                player.sendMessage(ChatColor.GREEN + "Upgraded frame block to tier " + frameBlock.getTier());
+                player.sendMessage(Component.text("Upgraded frame block to tier " + frameBlock.getTier(), NamedTextColor.GREEN));
                 
                 // Consume one item
                 if (player.getGameMode() != org.bukkit.GameMode.CREATIVE) {
@@ -162,7 +163,7 @@ public class BlockManager {
                 
                 return true;
             } else {
-                player.sendMessage(ChatColor.RED + "This material cannot be used to upgrade the frame block.");
+                player.sendMessage(Component.text("This material cannot be used to upgrade the frame block.", NamedTextColor.RED));
             }
         }
         
@@ -230,15 +231,15 @@ public class BlockManager {
                 tierName = "Unknown";
         }
         
-        meta.setDisplayName(ChatColor.YELLOW + tierName + " Frame");
+        meta.displayName(Component.text(tierName + " Frame", NamedTextColor.YELLOW));
         
         // Add lore
-        java.util.List<String> lore = new java.util.ArrayList<>();
-        lore.add(ChatColor.GRAY + "Place and upgrade this frame");
-        lore.add(ChatColor.GRAY + "with materials to build structures.");
-        lore.add("");
-        lore.add(ChatColor.GREEN + "Current Tier: " + tierName);
-        meta.setLore(lore);
+        java.util.List<Component> lore = new java.util.ArrayList<>();
+        lore.add(Component.text("Place and upgrade this frame", NamedTextColor.GRAY));
+        lore.add(Component.text("with materials to build structures.", NamedTextColor.GRAY));
+        lore.add(Component.empty());
+        lore.add(Component.text("Current Tier: " + tierName, NamedTextColor.GREEN));
+        meta.lore(lore);
         
         // Store tier in persistent data
         NamespacedKey frameKey = new NamespacedKey(plugin, "frame_block");

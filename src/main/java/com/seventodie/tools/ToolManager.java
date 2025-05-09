@@ -1,7 +1,9 @@
 package com.seventodie.tools;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.bukkit.Material;
@@ -13,6 +15,10 @@ import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 
 import com.seventodie.SevenToDiePlugin;
 import com.seventodie.blocks.FrameBlock;
@@ -113,11 +119,17 @@ public class ToolManager {
         ItemStack hammer = new ItemStack(Material.STONE_PICKAXE);
         ItemMeta meta = hammer.getItemMeta();
         
-        meta.setDisplayName("§7Stone Hammer");
-        meta.setLore(Arrays.asList(
-            "§7Upgrades frame blocks to wood tier",
-            "§8Max Tier: " + FrameBlock.getTierName(FrameBlock.TIER_WOOD)
-        ));
+        // Use Adventure API for display name
+        meta.displayName(Component.text("Stone Hammer", NamedTextColor.GRAY)
+            .decoration(TextDecoration.ITALIC, false));
+            
+        // Use Adventure API for lore
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.text("Upgrades frame blocks to wood tier", NamedTextColor.GRAY)
+            .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("Max Tier: " + FrameBlock.getTierName(FrameBlock.TIER_WOOD), NamedTextColor.DARK_GRAY)
+            .decoration(TextDecoration.ITALIC, false));
+        meta.lore(lore);
         
         // Set custom model data for resource pack
         meta.setCustomModelData(STONE_HAMMER_MODEL);
@@ -143,11 +155,17 @@ public class ToolManager {
         ItemStack hammer = new ItemStack(Material.IRON_PICKAXE);
         ItemMeta meta = hammer.getItemMeta();
         
-        meta.setDisplayName("§fIron Hammer");
-        meta.setLore(Arrays.asList(
-            "§7Upgrades frame blocks to rebar tier",
-            "§8Max Tier: " + FrameBlock.getTierName(FrameBlock.TIER_REBAR)
-        ));
+        // Use Adventure API for display name
+        meta.displayName(Component.text("Iron Hammer", NamedTextColor.WHITE)
+            .decoration(TextDecoration.ITALIC, false));
+            
+        // Use Adventure API for lore
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.text("Upgrades frame blocks to rebar tier", NamedTextColor.GRAY)
+            .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("Max Tier: " + FrameBlock.getTierName(FrameBlock.TIER_REBAR), NamedTextColor.DARK_GRAY)
+            .decoration(TextDecoration.ITALIC, false));
+        meta.lore(lore);
         
         // Set custom model data for resource pack
         meta.setCustomModelData(IRON_HAMMER_MODEL);
@@ -173,11 +191,17 @@ public class ToolManager {
         ItemStack hammer = new ItemStack(Material.DIAMOND_PICKAXE);
         ItemMeta meta = hammer.getItemMeta();
         
-        meta.setDisplayName("§bSteel Hammer");
-        meta.setLore(Arrays.asList(
-            "§7Upgrades frame blocks to concrete tier",
-            "§8Max Tier: " + FrameBlock.getTierName(FrameBlock.TIER_CONCRETE)
-        ));
+        // Use Adventure API for display name
+        meta.displayName(Component.text("Steel Hammer", NamedTextColor.AQUA)
+            .decoration(TextDecoration.ITALIC, false));
+            
+        // Use Adventure API for lore
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.text("Upgrades frame blocks to concrete tier", NamedTextColor.GRAY)
+            .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("Max Tier: " + FrameBlock.getTierName(FrameBlock.TIER_CONCRETE), NamedTextColor.DARK_GRAY)
+            .decoration(TextDecoration.ITALIC, false));
+        meta.lore(lore);
         
         // Set custom model data for resource pack
         meta.setCustomModelData(STEEL_HAMMER_MODEL);
