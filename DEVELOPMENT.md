@@ -2,6 +2,10 @@
 
 This guide provides detailed instructions for developing the SevenToDie Minecraft plugin using GitHub workflows, without needing to maintain a continuous Replit session.
 
+## AI-Powered Development
+
+This project includes AI-powered development capabilities that can automatically analyze code, fix bugs, implement features, and improve performance. For detailed information on using these features, see [AI Development Guide](.github/AI_DEVELOPMENT.md).
+
 ## GitHub Workflow Development
 
 GitHub Actions provides powerful CI/CD capabilities that we can leverage for development. This project includes two main workflows:

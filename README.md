@@ -2,6 +2,8 @@
 
 A comprehensive Minecraft server plugin that recreates 7 Days To Die gameplay mechanics on Paper 1.21.4.
 
+> 🤖 **AI-Powered Development**: This project uses AI-powered workflows to automatically analyze code, fix bugs, and implement features. [Learn more](.github/AI_DEVELOPMENT.md)
+
 ## Features
 
 - **Custom Building System**: Frame-based building system with upgradable blocks
