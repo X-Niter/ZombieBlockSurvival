@@ -73,19 +73,65 @@ uses: actions/setup-java@v3
 uses: actions/checkout@v4
 uses: actions/setup-java@v4
 
-# Fix multi-line string in PR body:
-body: `This pull request implements...`
+# Fix multi-line string in status update (line 125-134):
+body: `I'm now working on ${implementationType === 'fix' ? 'fixing' : ...} this issue.
+
+Steps:
+1. ✅ Analyzing the issue
+2. 🔄 Designing a solution
+...`
 # Should become:
 body: [
+  `I'm now working on ${implementationType === 'fix' ? 'fixing' : implementationType === 'feature' ? 'implementing' : implementationType === 'refactor' ? 'refactoring' : 'improving'} this issue.`,
+  '',
+  'Steps:',
+  '1. ✅ Analyzing the issue',
+  '2. 🔄 Designing a solution',
+  '3. ⏳ Implementing the code changes',
+  '4. ⏳ Testing the changes',
+  '5. ⏳ Creating a pull request',
+  '',
+  'I\'ll keep you updated on my progress.'
+].join('\n'),
+
+# Fix multi-line string in PR body (line 366-383):
+const prBody = `This pull request implements...`
+# Should become:
+const prBody = [
   `This pull request implements ${implementationType === 'fix' ? 'a fix for' : implementationType === 'feature' ? 'the feature requested in' : implementationType === 'refactor' ? 'the refactoring requested in' : 'the improvements requested in'} issue #${issueNumber}.`,
   '',
   '## Implementation Details',
-  implementationNotes,
+  `${implementationNotes}`,
   '',
   '## Build Status',
-  buildMessage,
-  '...'
-].join('\n'),
+  `${buildMessage}`,
+  '',
+  '## Testing',
+  `${buildSuccess ? '✅ All tests pass' : '⚠️ Some tests are failing and need attention'}`,
+  '',
+  '## Next Steps',
+  '1. Please review this implementation',
+  '2. Suggest any changes needed',
+  '3. Approve and merge when ready',
+  '',
+  `Closes #${issueNumber}`
+].join('\n');
+
+# Fix multi-line string in issue comment (line 410-419):
+body: `I've created a pull request with my implementation: #${pr.data.number}...`
+# Should become:
+body: [
+  `I've created a pull request with my implementation: #${pr.data.number}`,
+  '',
+  'Steps completed:',
+  '1. ✅ Analyzed the issue',
+  '2. ✅ Designed a solution',
+  '3. ✅ Implemented the code changes',
+  '4. ✅ Tested the changes',
+  '5. ✅ Created a pull request',
+  '',
+  'Please review the pull request and let me know if you need any adjustments or have questions about the implementation.'
+].join('\n')
 ```
 
 ### 4. ai-issue-processor.yml

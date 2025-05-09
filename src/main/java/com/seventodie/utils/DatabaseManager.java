@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -63,18 +64,28 @@ public class DatabaseManager {
      * Initialize the database
      */
     public void initialize() {
-        // Create database directory if it doesn't exist
-        File databaseDir = new File(plugin.getDataFolder(), "database");
-        if (!databaseDir.exists()) {
-            databaseDir.mkdirs();
-        }
-        
-        // Set up database file
-        databaseFile = new File(databaseDir, "seventodie.db");
-        
-        // Try multiple approaches for SQLite connectivity
-        if (!initializeWithRelocatedSQLite() && !initializeWithOriginalSQLite()) {
-            initializeWithFallbackMode();
+        try {
+            // Create database directory if it doesn't exist
+            File databaseDir = new File(plugin.getDataFolder(), "database");
+            if (!databaseDir.exists()) {
+                databaseDir.mkdirs();
+            }
+            
+            // Set up database file
+            databaseFile = new File(databaseDir, "seventodie.db");
+            
+            // Try multiple approaches for database connectivity
+            if (!initializeWithRelocatedSQLite()) {
+                plugin.getLogger().info("Relocated SQLite initialization failed, trying original SQLite...");
+                if (!initializeWithOriginalSQLite()) {
+                    plugin.getLogger().info("Original SQLite initialization failed, trying H2 or in-memory fallback mode...");
+                    if (!initializeWithFallbackMode()) {
+                        plugin.getLogger().severe("All database initialization approaches failed! Plugin functionality may be limited.");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Critical error during database initialization", e);
         }
     }
     
@@ -170,15 +181,32 @@ public class DatabaseManager {
             plugin.getLogger().warning("Initializing database in memory-only mode. Data will not be persisted!");
             inMemoryMode = true;
             
-            // Try to initialize with in-memory SQLite database
+            // Try H2 database as a last resort if available
             try {
-                // Try the relocated package first
-                Class.forName("com.seventodie.lib.sqlite.JDBC");
-                connection = DriverManager.getConnection("jdbc:sqlite::memory:");
-            } catch (ClassNotFoundException e) {
-                // Try the original package
-                Class.forName("org.sqlite.JDBC");
-                connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+                Class.forName("org.h2.Driver");
+                connection = DriverManager.getConnection("jdbc:h2:mem:seventodie;DB_CLOSE_DELAY=-1");
+                plugin.getLogger().info("Using H2 in-memory database as fallback");
+            } catch (ClassNotFoundException h2NotFound) {
+                // H2 not available, try SQLite in-memory mode
+                try {
+                    // Try the relocated package first
+                    Class.forName("com.seventodie.lib.sqlite.JDBC");
+                    
+                    // Try to use a more direct approach for in-memory mode
+                    try {
+                        // Set specific SQLite options for in-memory mode
+                        System.setProperty("com.seventodie.lib.sqlite.memory", "true");
+                        connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Falling back to basic SQLite connection: " + e.getMessage());
+                        connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+                    }
+                } catch (ClassNotFoundException e) {
+                    // Try the original package as a last resort
+                    Class.forName("org.sqlite.JDBC");
+                    System.setProperty("org.sqlite.memory", "true");
+                    connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+                }
             }
             
             // Verify connection works with a simple query
@@ -234,14 +262,92 @@ public class DatabaseManager {
             // Attempt to extract all libraries
             extractResourcesFromJar("native", libsDir);
             
-            // Set system properties for SQLite JDBC
-            System.setProperty(packageName + ".lib.path", libsDir.getAbsolutePath());
-            System.setProperty(packageName + ".lib.name", libFilename);
-            System.setProperty(packageName + ".lib.version", "3.43.0");
+            // Set core system properties used by SQLite JDBC
+            System.setProperty("sqlite.purejava", "true"); // Force pure Java mode as a fallback
             
-            plugin.getLogger().info("Set SQLite native library path to: " + libsDir.getAbsolutePath());
+            // Try multiple approaches
+            try {
+                // Approach 1: Try System.load direct loading on the right file
+                File libFile = new File(libsDir, libFilename);
+                if (libFile.exists()) {
+                    try {
+                        System.load(libFile.getAbsolutePath());
+                        plugin.getLogger().info("Loaded SQLite native library directly: " + libFile.getAbsolutePath());
+                    } catch (UnsatisfiedLinkError e) {
+                        plugin.getLogger().warning("Direct loading failed: " + e.getMessage());
+                    }
+                }
+                
+                // Approach 2: Update java.library.path
+                addDirectoryToJavaLibraryPath(libsDir.getAbsolutePath());
+                
+                // Approach 3: Use SQLite's own properties
+                System.setProperty(packageName + ".lib.path", libsDir.getAbsolutePath());
+                System.setProperty(packageName + ".lib.name", libFilename.replaceAll("^lib|\\.(so|dll|dylib)$", ""));
+                System.setProperty(packageName + ".lib.version", "3.43.0");
+                
+                // Approach 4: Tell SQLite to use a specific library path for binary loading
+                System.setProperty(packageName + ".tmpdir", libsDir.getAbsolutePath());
+                
+                // Approach 5: Make SQLite search the extracted native library path directly
+                System.setProperty("java.io.tmpdir", libsDir.getAbsolutePath());
+                
+                plugin.getLogger().info("Set SQLite native library path to: " + libsDir.getAbsolutePath());
+                
+                // Log all system properties to help with debugging
+                plugin.getLogger().info("Java library path: " + System.getProperty("java.library.path"));
+                plugin.getLogger().info("SQLite lib path: " + System.getProperty(packageName + ".lib.path"));
+                plugin.getLogger().info("SQLite lib name: " + System.getProperty(packageName + ".lib.name"));
+                
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING, "Failed to update library paths: " + e.getMessage(), e);
+            }
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "Failed to extract SQLite native libraries", e);
+        }
+    }
+    
+    /**
+     * Adds the specified path to the java.library.path system property and updates
+     * the ClassLoader's internal cache to reflect the change.
+     * 
+     * @param path the path to add to java.library.path
+     * @throws Exception if there is a reflection error
+     */
+    private void addDirectoryToJavaLibraryPath(String path) throws Exception {
+        try {
+            // Get the current java.library.path
+            String libraryPath = System.getProperty("java.library.path");
+            
+            // Skip if path is already in java.library.path
+            if (libraryPath.contains(path)) {
+                return;
+            }
+            
+            // Add the new path
+            if (libraryPath == null || libraryPath.isEmpty()) {
+                libraryPath = path;
+            } else {
+                libraryPath = path + File.pathSeparator + libraryPath;
+            }
+            
+            // Set the new java.library.path
+            System.setProperty("java.library.path", libraryPath);
+            
+            // Force the ClassLoader to reload the native library cache
+            // This uses reflection to access and clear a private field
+            try {
+                Field fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
+                fieldSysPath.setAccessible(true);
+                fieldSysPath.set(null, null);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Could not reset ClassLoader's native library cache: " + e.getMessage());
+            }
+            
+            plugin.getLogger().info("Added to java.library.path: " + path);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to add directory to java.library.path: " + e.getMessage());
+            throw e;
         }
     }
     

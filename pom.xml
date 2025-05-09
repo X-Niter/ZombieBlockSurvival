@@ -110,6 +110,14 @@
             <version>3.43.0.0</version>
             <scope>compile</scope>
         </dependency>
+        
+        <!-- H2 Database as fallback -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.2.224</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -166,6 +174,11 @@
                                     <pattern>org.sqlite</pattern>
                                     <shadedPattern>com.seventodie.lib.sqlite</shadedPattern>
                                 </relocation>
+                                <!-- Relocate H2 to avoid conflicts -->
+                                <relocation>
+                                    <pattern>org.h2</pattern>
+                                    <shadedPattern>com.seventodie.lib.h2</shadedPattern>
+                                </relocation>
                             </relocations>
                             <filters>
                                 <filter>
@@ -178,7 +191,34 @@
                                         <exclude>META-INF/NOTICE</exclude>
                                     </excludes>
                                 </filter>
+                                <!-- Specific filter for SQLite to minimize warnings -->
+                                <filter>
+                                    <artifact>org.xerial:sqlite-jdbc</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/versions/9/module-info**</exclude>
+                                        <exclude>META-INF/versions/9/org/sqlite/nativeimage/**</exclude>
+                                        <exclude>META-INF/maven/org.xerial/sqlite-jdbc/**</exclude>
+                                        <exclude>META-INF/native-image/org.xerial/sqlite-jdbc/**</exclude>
+                                    </excludes>
+                                </filter>
+                                <!-- Specific filter for H2 to minimize warnings -->
+                                <filter>
+                                    <artifact>com.h2database:h2</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/versions/**</exclude>
+                                        <exclude>META-INF/maven/**</exclude>
+                                        <exclude>org/h2/util/data.zip</exclude>
+                                    </excludes>
+                                </filter>
                             </filters>
+                            <!-- Minimize the JAR -->
+                            <minimizeJar>false</minimizeJar>
+                            <!-- Create dependency-reduced POM -->
+                            <createDependencyReducedPom>true</createDependencyReducedPom>
+                            <!-- Prevent duplicate entries in final JAR -->
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
                         </configuration>
                     </execution>
                 </executions>

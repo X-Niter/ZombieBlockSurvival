@@ -1,0 +1,239 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to triage'
+        required: true
+        type: string
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'issues' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Get issue number
+        id: issue-number
+        run: |
+          if [ "${{ github.event_name }}" == "issues" ]; then
+            echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          else
+            echo "number=${{ github.event.inputs.issue_number }}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Triage issue
+        id: triage
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = parseInt('${{ steps.issue-number.outputs.number }}');
+            
+            // Get the issue details
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            // Determine issue type (bug, feature, enhancement, etc.)
+            let type = 'other';
+            if (issue.title.toLowerCase().includes('bug') || 
+                issue.body.toLowerCase().includes('bug') ||
+                issue.body.toLowerCase().includes('error') ||
+                issue.body.toLowerCase().includes('not working')) {
+              type = 'bug';
+            } else if (issue.title.toLowerCase().includes('feature') || 
+                       issue.body.toLowerCase().includes('feature') ||
+                       issue.body.toLowerCase().includes('add ')) {
+              type = 'feature';
+            } else if (issue.title.toLowerCase().includes('enhance') || 
+                       issue.body.toLowerCase().includes('enhance') ||
+                       issue.body.toLowerCase().includes('improve')) {
+              type = 'enhancement';
+            } else if (issue.title.toLowerCase().includes('document') || 
+                       issue.body.toLowerCase().includes('document') ||
+                       issue.body.toLowerCase().includes('docs')) {
+              type = 'documentation';
+            }
+            
+            // Determine priority (high, medium, low)
+            let priority = 'medium';
+            if (issue.body.toLowerCase().includes('urgent') || 
+                issue.body.toLowerCase().includes('critical') ||
+                issue.body.toLowerCase().includes('high priority')) {
+              priority = 'high';
+            } else if (issue.body.toLowerCase().includes('minor') || 
+                       issue.body.toLowerCase().includes('low priority') ||
+                       issue.body.toLowerCase().includes('not urgent')) {
+              priority = 'low';
+            }
+            
+            // Determine component (which part of the plugin)
+            let component = 'general';
+            if (issue.body.toLowerCase().includes('database') ||
+                issue.body.toLowerCase().includes('sql')) {
+              component = 'database';
+            } else if (issue.body.toLowerCase().includes('block') ||
+                       issue.body.toLowerCase().includes('frame block')) {
+              component = 'blocks';
+            } else if (issue.body.toLowerCase().includes('quest')) {
+              component = 'quests';
+            } else if (issue.body.toLowerCase().includes('trader')) {
+              component = 'traders';
+            } else if (issue.body.toLowerCase().includes('tool') ||
+                       issue.body.toLowerCase().includes('hammer')) {
+              component = 'tools';
+            } else if (issue.body.toLowerCase().includes('biome') ||
+                       issue.body.toLowerCase().includes('world gen') ||
+                       issue.body.toLowerCase().includes('structure')) {
+              component = 'world generation';
+            } else if (issue.body.toLowerCase().includes('zombie') ||
+                       issue.body.toLowerCase().includes('mob') ||
+                       issue.body.toLowerCase().includes('entity')) {
+              component = 'entities';
+            }
+            
+            // Add labels to the issue
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: [type, `priority:${priority}`, `component:${component}`]
+            });
+            
+            // Create a triage comment
+            const triageReply = [
+              `Hello @${issue.user.login}! 👋`,
+              '',
+              `Thank you for your ${type}. I'm the AI assistant for this project, and I've automatically triaged this issue.`,
+              '',
+              `**Type:** ${type}`,
+              `**Priority:** ${priority}`,
+              `**Component:** ${component}`,
+              '',
+              `I'll analyze your issue in detail and respond shortly with more information. If you have any additional details to share in the meantime, please add them as a comment.`
+            ].join('\n');
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: triageReply
+            });
+            
+            return { type, priority, component };
+      
+      - name: Process AI command
+        if: ${{ github.event_name == 'issues' }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = parseInt('${{ steps.issue-number.outputs.number }}');
+            
+            // Get the issue details
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            // Check for AI commands in the issue
+            const aiCommandRegex = /\/ai\s+(\w+)/i;
+            const match = issue.body ? issue.body.match(aiCommandRegex) : null;
+            
+            if (match) {
+              const command = match[1].toLowerCase();
+              let responseBody;
+              
+              if (command === 'help') {
+                responseBody = [
+                  'Here are the AI assistant commands you can use:',
+                  '',
+                  '- `/ai help` - Show this help message',
+                  '- `/ai analyze` - Request a detailed analysis of the issue',
+                  '- `/ai fix` - Request an automated fix for a bug',
+                  '- `/ai implement` - Request implementation of a feature or enhancement',
+                  '- `/ai explain` - Request a detailed explanation of how something works',
+                  '',
+                  'Let me know if you need any assistance!'
+                ].join('\n');
+              } else if (command === 'fix' || command === 'implement') {
+                responseBody = [
+                  `I'll start working on ${command === 'fix' ? 'a fix' : 'an implementation'} for this issue right away.`,
+                  '',
+                  'I\'ll analyze the codebase, develop a solution, and create a pull request with the changes. This process may take a few minutes.',
+                  '',
+                  'I\'ll update you when the pull request is ready for your review.'
+                ].join('\n');
+                
+                // Trigger the appropriate workflow
+                await github.rest.actions.createWorkflowDispatch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: command === 'fix' ? 'auto-fix.yml' : 'ai-implementation.yml',
+                  ref: 'main',
+                  inputs: {
+                    issue_number: issueNumber.toString(),
+                    description: issue.body || '',
+                    implementation_type: command === 'fix' ? 'fix' : 'feature'
+                  }
+                });
+              } else if (command === 'analyze') {
+                responseBody = [
+                  'I\'ll analyze this issue in detail right away.',
+                  '',
+                  'I\'ll examine the codebase, identify relevant components, and provide a detailed assessment of the issue, its impact, and potential solutions.',
+                  '',
+                  'I\'ll post my analysis as a comment on this issue shortly.'
+                ].join('\n');
+                
+                // Trigger the analysis workflow
+                await github.rest.actions.createWorkflowDispatch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: 'ai-analysis.yml',
+                  ref: 'main',
+                  inputs: {
+                    issue_number: issueNumber.toString(),
+                    analysis_type: 'issue'
+                  }
+                });
+              } else if (command === 'explain') {
+                responseBody = [
+                  'I\'ll prepare a detailed explanation for you.',
+                  '',
+                  'I\'ll analyze the relevant parts of the codebase and provide a clear, comprehensive explanation of how it works.',
+                  '',
+                  'I\'ll post my explanation as a comment on this issue shortly.'
+                ].join('\n');
+                
+                // You could trigger a workflow here if needed
+              } else {
+                responseBody = [
+                  `I don't recognize the command \`/ai ${command}\`. Here are the valid commands:`,
+                  '',
+                  '- `/ai help` - Show this help message',
+                  '- `/ai analyze` - Request a detailed analysis of the issue',
+                  '- `/ai fix` - Request an automated fix for a bug',
+                  '- `/ai implement` - Request implementation of a feature or enhancement',
+                  '- `/ai explain` - Request a detailed explanation of how something works'
+                ].join('\n');
+              }
+              
+              // Post the response as a comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: responseBody
+              });
+            }

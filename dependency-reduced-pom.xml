@@ -55,6 +55,10 @@
                   <pattern>org.sqlite</pattern>
                   <shadedPattern>com.seventodie.lib.sqlite</shadedPattern>
                 </relocation>
+                <relocation>
+                  <pattern>org.h2</pattern>
+                  <shadedPattern>com.seventodie.lib.h2</shadedPattern>
+                </relocation>
               </relocations>
               <filters>
                 <filter>
@@ -67,7 +71,29 @@
                     <exclude>META-INF/NOTICE</exclude>
                   </excludes>
                 </filter>
+                <filter>
+                  <artifact>org.xerial:sqlite-jdbc</artifact>
+                  <excludes>
+                    <exclude>META-INF/versions/9/module-info**</exclude>
+                    <exclude>META-INF/versions/9/org/sqlite/nativeimage/**</exclude>
+                    <exclude>META-INF/maven/org.xerial/sqlite-jdbc/**</exclude>
+                    <exclude>META-INF/native-image/org.xerial/sqlite-jdbc/**</exclude>
+                  </excludes>
+                </filter>
+                <filter>
+                  <artifact>com.h2database:h2</artifact>
+                  <excludes>
+                    <exclude>META-INF/versions/**</exclude>
+                    <exclude>META-INF/maven/**</exclude>
+                    <exclude>org/h2/util/data.zip</exclude>
+                  </excludes>
+                </filter>
               </filters>
+              <minimizeJar>false</minimizeJar>
+              <createDependencyReducedPom>true</createDependencyReducedPom>
+              <transformers>
+                <transformer />
+              </transformers>
             </configuration>
           </execution>
         </executions>

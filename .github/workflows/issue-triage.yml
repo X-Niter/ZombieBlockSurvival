@@ -154,24 +154,28 @@ jobs:
               let responseBody = '';
               
               if (command === 'help') {
-                responseBody = `## AI Assistant Commands
-
-Here are the commands you can use:
-
-- \`/ai help\` - Show this help message
-- \`/ai fix\` - Request the AI to implement a fix for this issue
-- \`/ai analyze\` - Request detailed analysis of this issue
-- \`/ai status\` - Check the status of any AI-related work for this issue
-- \`/ai implement\` - Request implementation of a feature or enhancement
-- \`/ai explain\` - Request a detailed explanation of how something works
-
-Let me know if you need any assistance!`;
+                responseBody = [
+                  '## AI Assistant Commands',
+                  '',
+                  'Here are the commands you can use:',
+                  '',
+                  '- `/ai help` - Show this help message',
+                  '- `/ai fix` - Request the AI to implement a fix for this issue',
+                  '- `/ai analyze` - Request detailed analysis of this issue',
+                  '- `/ai status` - Check the status of any AI-related work for this issue',
+                  '- `/ai implement` - Request implementation of a feature or enhancement',
+                  '- `/ai explain` - Request a detailed explanation of how something works',
+                  '',
+                  'Let me know if you need any assistance!'
+                ].join('\n');
               } else if (command === 'fix' || command === 'implement') {
-                responseBody = `I'll start working on ${command === 'fix' ? 'a fix' : 'an implementation'} for this issue right away.
-
-I'll analyze the codebase, develop a solution, and create a pull request with the changes. This process may take a few minutes.
-
-I'll update you when the pull request is ready for your review.`;
+                responseBody = [
+                  `I'll start working on ${command === 'fix' ? 'a fix' : 'an implementation'} for this issue right away.`,
+                  '',
+                  'I\'ll analyze the codebase, develop a solution, and create a pull request with the changes. This process may take a few minutes.',
+                  '',
+                  'I\'ll update you when the pull request is ready for your review.'
+                ].join('\n');
                 
                 // Add ai-implementing label
                 await github.rest.issues.addLabels({
