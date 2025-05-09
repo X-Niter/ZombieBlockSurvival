@@ -21,6 +21,20 @@ This project is configured for easy development using GitHub workflows.
 
 The plugin is automatically built when changes are pushed to the repository. You can view the build status and results in the "Actions" tab of the GitHub repository.
 
+### AI-Powered Development Dashboard
+
+This project includes a user-friendly web dashboard for AI-powered development:
+
+1. After setting up your repository, visit the GitHub Pages site: `https://your-username.github.io/SevenToDie/`
+2. Authenticate with a GitHub personal access token
+3. Use the dashboard to:
+   - Trigger AI analysis, bug fixes, and feature implementation
+   - Create issues that get automatically analyzed by AI
+   - Track the status of AI-driven development tasks
+   - Monitor the overall health of your project
+
+For setup instructions, see the [Setup Guide](https://your-username.github.io/SevenToDie/setup) on the dashboard.
+
 ### Interactive Development Environment
 
 You can create an on-demand development environment right in GitHub Actions:

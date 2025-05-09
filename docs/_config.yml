@@ -1,0 +1,22 @@
+theme: jekyll-theme-cayman
+title: "SevenToDie Plugin Dashboard"
+description: "AI-powered development dashboard for the SevenToDie Minecraft plugin"
+baseurl: "/SevenToDie"
+repository: "YOUR_USERNAME/SevenToDie"
+show_downloads: true
+
+plugins:
+  - jekyll-github-metadata
+  - jekyll-seo-tag
+
+# Update this with your actual repository name after pushing to GitHub
+github:
+  repository_url: https://github.com/YOUR_USERNAME/SevenToDie
+  owner_url: https://github.com/YOUR_USERNAME
+  is_project_page: true
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: "default"
