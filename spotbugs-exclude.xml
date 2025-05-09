@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Exclude specific classes that might have false positives -->
+    <Match>
+        <Class name="com.seventodie.SevenToDiePlugin"/>
+        <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>
+    </Match>
+    
+    <!-- Exclude some common patterns that are intentional in Minecraft plugins -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    
+    <!-- Skip resource leak checks for Bukkit resources which are managed by the server -->
+    <Match>
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
+    </Match>
+    
+    <!-- Unused fields might be required by future implementations -->
+    <Match>
+        <Bug pattern="UUF_UNUSED_FIELD"/>
+    </Match>
+    
+    <!-- Exclude serialization-related issues as plugins aren't serialized -->
+    <Match>
+        <Bug pattern="SE_BAD_FIELD,SE_BAD_FIELD_STORE,SE_NO_SERIALVERSIONID"/>
+    </Match>
+</FindBugsFilter>

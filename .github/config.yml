@@ -1,0 +1,26 @@
+# Configuration for new-issue-welcome - https://github.com/behaviorbot/new-issue-welcome
+
+# Comment to be posted to on first time issues
+newIssueWelcomeComment: >
+  Thanks for opening your first issue in the SevenToDie plugin! A maintainer will get back to you as soon as possible.
+
+# Configuration for new-pr-welcome - https://github.com/behaviorbot/new-pr-welcome
+
+# Comment to be posted to on PRs from first time contributors
+newPRWelcomeComment: >
+  Thanks for your contribution to the SevenToDie plugin! We appreciate your work to help improve this Minecraft plugin.
+
+# Configuration for first-pr-merge - https://github.com/behaviorbot/first-pr-merge
+
+# Comment to be posted to on pull requests merged by a first time user
+firstPRMergeComment: >
+  Congrats on merging your first pull request to the SevenToDie plugin! Your contribution helps make this plugin better for everyone.
+
+# Configuration for request-info - https://github.com/behaviorbot/request-info
+
+# *OPTIONAL* Comment to reply with
+requestInfoReplyComment: >
+  We would appreciate it if you could provide more information about this issue/PR. Please add details that help us understand what you're trying to accomplish.
+
+# *OPTIONAL* Label to be added to Issues and PRs with insufficient information given
+requestInfoLabelToAdd: needs-more-info
