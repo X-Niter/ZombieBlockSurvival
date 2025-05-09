@@ -132,7 +132,7 @@ jobs:
                 '4. ⏳ Testing the changes',
                 '5. ⏳ Creating a pull request',
                 '',
-                'I\'ll keep you updated on my progress.'
+                "I'll keep you updated on my progress."
               ].join('\n')
             });
       

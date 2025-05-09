@@ -46,25 +46,25 @@ public class CommandManager implements CommandExecutor, TabCompleter {
         }
     }
     
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        // Find the matching command
-        for (BaseCommand cmd : commands) {
-            if (cmd.getName().equalsIgnoreCase(command.getName())) {
-                return cmd.execute(sender, args);
-            }
-        }
-        return false;
+  @Override
+  public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    // Find the matching command
+    for (BaseCommand cmd : commands) {
+      if (cmd.getName().equalsIgnoreCase(command.getName())) {
+        return cmd.execute(sender, args);
+      }
     }
-    
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
-        // Find the matching command
-        for (BaseCommand cmd : commands) {
-            if (cmd.getName().equalsIgnoreCase(command.getName())) {
-                return cmd.tabComplete(sender, args);
-            }
-        }
-        return new ArrayList<>();
+    return false;
+  }
+  
+  @Override
+  public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
+    // Find the matching command
+    for (BaseCommand cmd : commands) {
+      if (cmd.getName().equalsIgnoreCase(command.getName())) {
+        return cmd.tabComplete(sender, args);
+      }
     }
+    return new ArrayList<>();
+  }
 }
