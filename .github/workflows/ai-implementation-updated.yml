@@ -1,402 +1,164 @@
-name: AI Implementation and Testing
+name: AI Implementation
 
 on:
-  issue_comment:
-    types: [created]
   workflow_dispatch:
     inputs:
       issue_number:
         description: 'Issue number to implement'
         required: true
-        type: number
+        type: string
       implementation_type:
         description: 'Type of implementation'
         required: true
-        default: 'fix'
         type: choice
         options:
           - fix
           - feature
-          - improvement
           - refactor
+          - improve
+      description:
+        description: 'Implementation description'
+        required: false
+        type: string
 
 jobs:
-  check-trigger:
-    name: Check if Implementation Needed
-    runs-on: ubuntu-latest
-    outputs:
-      should_implement: ${{ steps.check-command.outputs.should_implement }}
-      issue_number: ${{ steps.check-command.outputs.issue_number }}
-      implementation_type: ${{ steps.check-command.outputs.implementation_type }}
-    
-    steps:
-      - name: Check for implementation command
-        id: check-command
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            let shouldImplement = false;
-            let issueNumber = '${{ github.event.inputs.issue_number }}';
-            let implementationType = '${{ github.event.inputs.implementation_type }}';
-            
-            // Check if this was triggered by a comment with command
-            if (context.payload.comment && context.payload.issue) {
-              const commentBody = context.payload.comment.body.trim();
-              
-              if (commentBody.startsWith('/ai fix')) {
-                shouldImplement = true;
-                issueNumber = context.payload.issue.number.toString();
-                implementationType = 'fix';
-              } else if (commentBody.startsWith('/ai implement')) {
-                shouldImplement = true;
-                issueNumber = context.payload.issue.number.toString();
-                implementationType = 'feature';
-              } else if (commentBody.startsWith('/ai refactor')) {
-                shouldImplement = true;
-                issueNumber = context.payload.issue.number.toString();
-                implementationType = 'refactor';
-              } else if (commentBody.startsWith('/ai improve')) {
-                shouldImplement = true;
-                issueNumber = context.payload.issue.number.toString();
-                implementationType = 'improvement';
-              }
-            }
-            // If triggered by workflow_dispatch, always run
-            else if (context.payload.inputs && context.payload.inputs.issue_number) {
-              shouldImplement = true;
-            }
-            
-            // Set outputs
-            core.setOutput('should_implement', shouldImplement.toString());
-            core.setOutput('issue_number', issueNumber);
-            core.setOutput('implementation_type', implementationType);
-              
-            console.log(`Should implement: ${shouldImplement}, Issue: ${issueNumber}, Type: ${implementationType}`);
-  
-  implement-solution:
-    name: Implement and Test Solution
-    needs: check-trigger
-    if: needs.check-trigger.outputs.should_implement == 'true'
+  implement:
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+      
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-          
+      
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-          
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests openai
       
-      - name: Update issue status
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const issueNumber = ${{ needs.check-trigger.outputs.issue_number }};
-            const implementationType = '${{ needs.check-trigger.outputs.implementation_type }}';
-            
-            // Add in-progress label
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              labels: ['ai-implementing']
-            });
-            
-            // Post status update
-            const statusMessage = [
-              `I'm now working on ${implementationType === 'fix' ? 'fixing' : implementationType === 'feature' ? 'implementing' : implementationType === 'refactor' ? 'refactoring' : 'improving'} this issue.`,
-              '',
-              'Steps:',
-              '1. ✅ Analyzing the issue',
-              '2. 🔄 Designing a solution',
-              '3. ⏳ Implementing the code changes',
-              '4. ⏳ Testing the changes',
-              '5. ⏳ Creating a pull request',
-              '',
-              'I\'ll keep you updated on my progress.'
-            ].join('\n');
-            
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              body: statusMessage
-            });
-      
       - name: Get issue details
-        id: get-issue
+        id: issue
         uses: actions/github-script@v6
-        env:
-          ISSUE_NUMBER: ${{ needs.check-trigger.outputs.issue_number }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issueNumber = process.env.ISSUE_NUMBER;
+            const issueNumber = parseInt('${{ github.event.inputs.issue_number }}');
             
-            // Get issue details
             const issue = await github.rest.issues.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: parseInt(issueNumber)
+              issue_number: issueNumber
             });
-            
-            // Get issue comments
-            const comments = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: parseInt(issueNumber)
-            });
-            
-            // Extract issue data
-            const issueData = {
-              title: issue.data.title,
-              body: issue.data.body,
-              labels: issue.data.labels.map(label => label.name),
-              comments: comments.data.map(comment => ({
-                user: comment.user.login,
-                body: comment.body
-              }))
-            };
-            
-            // Save issue data to file
-            const fs = require('fs');
-            fs.writeFileSync('issue_data.json', JSON.stringify(issueData, null, 2));
             
             return {
               title: issue.data.title,
-              type: issue.data.labels.find(label => ['bug', 'enhancement', 'feature'].includes(label.name))?.name || 'unknown'
+              body: issue.data.body || '',
+              labels: issue.data.labels.map(label => label.name)
             };
       
-      - name: Design and implement solution
+      - name: Create implementation branch
+        id: create-branch
+        run: |
+          ISSUE_NUMBER="${{ github.event.inputs.issue_number }}"
+          IMPLEMENTATION_TYPE="${{ github.event.inputs.implementation_type }}"
+          BRANCH_NAME="${IMPLEMENTATION_TYPE}/issue-${ISSUE_NUMBER}"
+          
+          git checkout -b "${BRANCH_NAME}"
+          
+          echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "Created branch: ${BRANCH_NAME}"
+      
+      - name: Implement with AI
         id: implement
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ISSUE_NUMBER: ${{ needs.check-trigger.outputs.issue_number }}
-          IMPLEMENTATION_TYPE: ${{ needs.check-trigger.outputs.implementation_type }}
-          ISSUE_TITLE: ${{ fromJson(steps.get-issue.outputs.result).title }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Designing and implementing solution for issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}"
+          python .github/scripts/ai_code_processor.py \
+            implement \
+            --issue ${{ github.event.inputs.issue_number }} \
+            --type ${{ github.event.inputs.implementation_type }} \
+            --repo ${{ github.repository }} \
+            --output implementation.json
           
-          # Create branch name
-          BRANCH_NAME="ai/${IMPLEMENTATION_TYPE}/issue-${ISSUE_NUMBER}"
-          echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
-          
-          # Create new branch
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-          git checkout -b "${BRANCH_NAME}"
-          
-          # Here we would use AI to analyze code and implement a solution
-          # For demonstration, we'll create a placeholder implementation
-          
-          echo "Creating example implementation files..."
-          
-          # Create different implementations based on type
-          if [[ "${IMPLEMENTATION_TYPE}" == "fix" ]]; then
-            # Create a bugfix (for demo)
-            cat > implementation-notes.md << EOL
-            # AI-Generated Fix for Issue #${ISSUE_NUMBER}
-            
-            ## Problem Analysis
-            The issue occurs because of [problem analysis would go here]
-            
-            ## Implementation Details
-            The fix modifies the following files:
-            - \`src/main/java/com/seventodie/utils/SomeClass.java\`
-            
-            Changes:
-            - Fixed null pointer exception by adding null check
-            - Added proper error handling
-            - Updated logging
-            EOL
-            
-          elif [[ "${IMPLEMENTATION_TYPE}" == "feature" ]]; then
-            # Create a feature implementation (for demo)
-            cat > implementation-notes.md << EOL
-            # AI-Generated Feature Implementation for Issue #${ISSUE_NUMBER}
-            
-            ## Feature Analysis
-            This implementation adds [feature details would go here]
-            
-            ## Implementation Details
-            This feature adds or modifies the following files:
-            - \`src/main/java/com/seventodie/features/NewFeature.java\` (new file)
-            - \`src/main/java/com/seventodie/SevenToDiePlugin.java\` (modified)
-            
-            The feature includes:
-            - New classes for functionality
-            - Integration with existing systems
-            - Configuration options
-            - Documentation
-            EOL
-            
-          elif [[ "${IMPLEMENTATION_TYPE}" == "refactor" ]]; then
-            # Create a refactoring implementation (for demo)
-            cat > implementation-notes.md << EOL
-            # AI-Generated Code Refactoring for Issue #${ISSUE_NUMBER}
-            
-            ## Refactoring Analysis
-            This refactoring improves [refactoring details would go here]
-            
-            ## Implementation Details
-            This refactoring modifies the following files:
-            - \`src/main/java/com/seventodie/utils/DatabaseManager.java\`
-            - \`src/main/java/com/seventodie/SevenToDiePlugin.java\`
-            
-            Changes:
-            - Extracted common functionality into utility methods
-            - Improved naming conventions
-            - Reduced code duplication
-            - Enhanced performance
-            EOL
-            
-          else # improvement
-            # Create an improvement implementation (for demo)
-            cat > implementation-notes.md << EOL
-            # AI-Generated Improvement for Issue #${ISSUE_NUMBER}
-            
-            ## Improvement Analysis
-            This improvement enhances [improvement details would go here]
-            
-            ## Implementation Details
-            This improvement modifies the following files:
-            - \`src/main/java/com/seventodie/utils/ConfigManager.java\`
-            
-            Changes:
-            - Optimized configuration loading
-            - Added caching mechanism
-            - Improved error reporting
-            EOL
-          fi
-          
-          # Create placeholder implementation file
-          cat > ai-implementation.java << EOL
-          package com.seventodie.utils;
-          
-          /**
-           * AI-generated implementation for issue #${ISSUE_NUMBER}
-           * ${ISSUE_TITLE}
-           * 
-           * Type: ${IMPLEMENTATION_TYPE}
-           */
-          public class AIImplementation {
-              // This is a placeholder for the actual implementation
-              // In a real system, AI would generate actual code changes
-          }
-          EOL
-          
-          # Commit changes
-          git add implementation-notes.md ai-implementation.java
-          git commit -m "AI: ${IMPLEMENTATION_TYPE^} for issue #${ISSUE_NUMBER}"
-          git push origin "${BRANCH_NAME}"
-          
-          echo "Implementation committed to branch ${BRANCH_NAME}"
-      
-      - name: Test implementation
-        id: test
-        run: |
-          echo "Testing implementation..."
-          
-          # Run Maven build to verify implementation
-          mvn clean compile
-          
-          # Build status check
-          if [ $? -eq 0 ]; then
-            echo "BUILD_SUCCESS=true" >> $GITHUB_ENV
-            echo "BUILD_MESSAGE=The implementation builds successfully." >> $GITHUB_ENV
+          if [ -f implementation.json ]; then
+            IMPLEMENTATION_NOTES=$(cat implementation.json | jq -r '.notes // "Implementation complete."')
+            echo "notes<<EOF" >> $GITHUB_OUTPUT
+            echo "${IMPLEMENTATION_NOTES}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "Implementation notes generated"
           else
-            echo "BUILD_SUCCESS=false" >> $GITHUB_ENV
-            echo "BUILD_MESSAGE=The implementation fails to build. Further refinement needed." >> $GITHUB_ENV
+            echo "notes=Implementation complete without detailed notes." >> $GITHUB_OUTPUT
+            echo "No implementation notes file generated"
           fi
+      
+      - name: Build and test
+        id: build
+        run: |
+          mvn clean package
+          
+          if [ $? -eq 0 ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "message=Build and tests passed successfully." >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "message=Build failed or tests did not pass." >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit changes
+        run: |
+          git config --local user.email "ai-assistant@example.com"
+          git config --local user.name "AI Implementation Assistant"
+          
+          git add .
+          git commit -m "Implement ${{ github.event.inputs.implementation_type }} for issue #${{ github.event.inputs.issue_number }}"
+      
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.create-branch.outputs.branch_name }}
       
       - name: Create pull request
         uses: actions/github-script@v6
-        env:
-          ISSUE_NUMBER: ${{ needs.check-trigger.outputs.issue_number }}
-          BRANCH_NAME: ${{ env.BRANCH_NAME }}
-          BUILD_SUCCESS: ${{ env.BUILD_SUCCESS }}
-          BUILD_MESSAGE: ${{ env.BUILD_MESSAGE }}
-          IMPLEMENTATION_TYPE: ${{ needs.check-trigger.outputs.implementation_type }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');
+            const issueNumber = parseInt('${{ github.event.inputs.issue_number }}');
+            const implementationType = '${{ github.event.inputs.implementation_type }}';
+            const branchName = '${{ steps.create-branch.outputs.branch_name }}';
+            const buildStatus = '${{ steps.build.outputs.status }}';
+            const buildMessage = '${{ steps.build.outputs.message }}';
+            const implementationNotes = `${{ steps.implement.outputs.notes }}`;
             
-            const issueNumber = process.env.ISSUE_NUMBER;
-            const branchName = process.env.BRANCH_NAME;
-            const buildSuccess = process.env.BUILD_SUCCESS === 'true';
-            const buildMessage = process.env.BUILD_MESSAGE;
-            const implementationType = process.env.IMPLEMENTATION_TYPE;
-            
-            // Read implementation notes
-            const implementationNotes = fs.readFileSync('implementation-notes.md', 'utf8');
-            
-            // Create PR title based on type
-            let prTitle = '';
-            switch (implementationType) {
-              case 'fix':
-                prTitle = `Fix: Issue #${issueNumber}`;
-                break;
-              case 'feature':
-                prTitle = `Feature: Implementation for issue #${issueNumber}`;
-                break;
-              case 'refactor':
-                prTitle = `Refactor: Code improvements for issue #${issueNumber}`;
-                break;
-              case 'improvement':
-                prTitle = `Improve: Enhancements for issue #${issueNumber}`;
-                break;
-              default:
-                prTitle = `AI: Implementation for issue #${issueNumber}`;
-            }
-            
-            // Create PR body
-            const prBody = [
-              `This pull request implements ${implementationType === 'fix' ? 'a fix for' : implementationType === 'feature' ? 'the feature requested in' : implementationType === 'refactor' ? 'the refactoring requested in' : 'the improvements requested in'} issue #${issueNumber}.`,
-              '',
-              '## Implementation Details',
-              implementationNotes,
-              '',
-              '## Build Status',
-              buildMessage,
-              '',
-              '## Testing',
-              `${buildSuccess ? '✅ All tests pass' : '⚠️ Some tests are failing and need attention'}`,
-              '',
-              '## Next Steps',
-              '1. Please review this implementation',
-              '2. Suggest any changes needed',
-              '3. Approve and merge when ready',
-              '',
-              `Closes #${issueNumber}`
-            ].join('\n');
-            
-            // Create the PR
             const pr = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: prTitle,
-              body: prBody,
+              title: `${implementationType.charAt(0).toUpperCase() + implementationType.slice(1)} for issue #${issueNumber}`,
+              body: [
+                `This pull request implements ${implementationType === 'fix' ? 'a fix for' : implementationType === 'feature' ? 'the feature requested in' : implementationType === 'refactor' ? 'the refactoring requested in' : 'the improvements requested in'} issue #${issueNumber}.`,
+                '',
+                '## Implementation Details',
+                implementationNotes,
+                '',
+                '## Build Status',
+                buildMessage,
+                '',
+                'This PR was generated automatically by the AI implementation workflow.'
+              ].join('\n'),
               head: branchName,
               base: 'main'
             });
-            
-            console.log(`Created PR #${pr.data.number}`);
             
             // Add labels to the PR
             await github.rest.issues.addLabels({
@@ -406,38 +168,18 @@ jobs:
               labels: ['ai-generated', implementationType]
             });
             
-            // Comment on the issue with completion message
-            const completionMessage = [
-              `I've created a pull request with my implementation: #${pr.data.number}`,
-              '',
-              'Steps completed:',
-              '1. ✅ Analyzed the issue',
-              '2. ✅ Designed a solution',
-              '3. ✅ Implemented the code changes',
-              '4. ✅ Tested the changes',
-              '5. ✅ Created a pull request',
-              '',
-              'Please review the pull request and let me know if you need any adjustments or have questions about the implementation.'
-            ].join('\n');
-            
+            // Comment on the original issue
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: parseInt(issueNumber),
-              body: completionMessage
-            });
-            
-            // Update issue labels
-            await github.rest.issues.removeLabel({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: parseInt(issueNumber),
-              name: 'ai-implementing'
-            });
-            
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: parseInt(issueNumber),
-              labels: ['ai-implemented']
+              issue_number: issueNumber,
+              body: [
+                `I've created a pull request (#${pr.data.number}) with an implementation for this issue.`,
+                '',
+                `The PR contains ${implementationType === 'fix' ? 'a fix' : implementationType === 'feature' ? 'the requested feature' : implementationType === 'refactor' ? 'the requested refactoring' : 'the requested improvements'}.`,
+                '',
+                `Build status: ${buildStatus === 'success' ? '✅ Success' : '❌ Failed'}`,
+                '',
+                'Please review the PR and provide feedback.'
+              ].join('\n')
             });

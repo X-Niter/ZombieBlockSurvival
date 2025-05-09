@@ -1,0 +1,114 @@
+name: Code Improvement Suggestions
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Run weekly on Sundays
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  suggest-improvements:
+    name: Generate Improvement Suggestions
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for proper analysis
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: Analyze project structure and code
+        id: code-analysis
+        run: |
+          echo "## Repository Structure" > code-analysis.md
+          echo '```' >> code-analysis.md
+          find . -type f -name "*.java" | sort >> code-analysis.md
+          echo '```' >> code-analysis.md
+          
+          echo -e "\n## Maven Dependencies" >> code-analysis.md
+          echo '```' >> code-analysis.md
+          grep -A 20 "<dependencies>" pom.xml >> code-analysis.md
+          echo '```' >> code-analysis.md
+          
+          echo -e "\n## Code Metrics" >> code-analysis.md
+          echo "* Java files: $(find . -name "*.java" | wc -l)" >> code-analysis.md
+          echo "* Lines of code: $(find . -name "*.java" | xargs wc -l | tail -1)" >> code-analysis.md
+          echo "* Last commits:" >> code-analysis.md
+          echo '```' >> code-analysis.md
+          git log --pretty=format:"%h - %an, %ar : %s" -5 >> code-analysis.md
+          echo '```' >> code-analysis.md
+      
+      - name: Run AI analysis for improvements
+        id: ai-improvements
+        if: ${{ env.OPENAI_API_KEY }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          # This is where an OpenAI API call would analyze the codebase
+          # For now we'll create a placeholder with sample suggestions
+          
+          echo "## AI-Generated Improvement Suggestions" > improvement-suggestions.md
+          
+          echo -e "\n### Performance Improvements" >> improvement-suggestions.md
+          echo "* Consider using caching for frequently accessed database records" >> improvement-suggestions.md
+          echo "* Optimize database queries in DatabaseManager.java" >> improvement-suggestions.md
+          
+          echo -e "\n### Code Quality" >> improvement-suggestions.md
+          echo "* Add unit tests for critical components" >> improvement-suggestions.md
+          echo "* Improve error handling in network operations" >> improvement-suggestions.md
+          
+          echo -e "\n### Feature Suggestions" >> improvement-suggestions.md
+          echo "* Implement advanced zombie AI pathfinding" >> improvement-suggestions.md
+          echo "* Add configurable difficulty settings" >> improvement-suggestions.md
+      
+      - name: Create improvement suggestions issue
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            // Read analysis files
+            const codeAnalysis = fs.readFileSync('code-analysis.md', 'utf8');
+            let improvementSuggestions = "No AI-generated suggestions available.";
+            
+            if (fs.existsSync('improvement-suggestions.md')) {
+              improvementSuggestions = fs.readFileSync('improvement-suggestions.md', 'utf8');
+            }
+            
+            // Create issue with suggestions
+            const currentDate = new Date().toISOString().split('T')[0];
+            
+            const issueBody = [
+              `# Periodic Code Improvement Suggestions (${currentDate})`,
+              '',
+              'This is an automated issue created to suggest potential improvements to the codebase.',
+              '',
+              codeAnalysis,
+              '',
+              improvementSuggestions,
+              '',
+              '## Next Steps',
+              '',
+              'Please review these suggestions and indicate which ones should be implemented.',
+              'The AI assistant will prioritize the selected improvements for the next development cycle.',
+              '',
+              '- [ ] Implement all suggested improvements',
+              '- [ ] Implement selected improvements (please comment with selections)',
+              '- [ ] Request more detailed analysis of specific areas',
+              '- [ ] Defer improvements to a later time'
+            ].join('\n');
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Code Improvement Suggestions - ${currentDate}`,
+              body: issueBody,
+              labels: ['enhancement', 'automated']
+            });

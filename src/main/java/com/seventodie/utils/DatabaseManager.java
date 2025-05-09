@@ -1,14 +1,23 @@
 package com.seventodie.utils;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Enumeration;
 import java.util.UUID;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.logging.Level;
 
 import org.bukkit.Location;
@@ -23,6 +32,7 @@ public class DatabaseManager {
     
     private final SevenToDiePlugin plugin;
     private Connection connection;
+    private boolean inMemoryMode = false;
     
     // Database file
     private File databaseFile;
@@ -33,6 +43,17 @@ public class DatabaseManager {
     private static final String TABLE_TRADERS = "traders";
     private static final String TABLE_PLAYER_QUESTS = "player_quests";
     private static final String TABLE_FRAME_BLOCKS = "frame_blocks";
+    
+    // Native library names
+    private static final String[] NATIVE_LIBRARIES = {
+        "sqlite-native-win-x64.dll",
+        "sqlite-native-win-x86.dll",
+        "libsqlite-native-mac.dylib",
+        "libsqlite-native-linux-x64.so",
+        "libsqlite-native-linux-x86.so",
+        "libsqlite-native-linux-arm.so",
+        "libsqlite-native-linux-aarch64.so"
+    };
     
     public DatabaseManager(SevenToDiePlugin plugin) {
         this.plugin = plugin;
@@ -51,98 +72,135 @@ public class DatabaseManager {
         // Set up database file
         databaseFile = new File(databaseDir, "seventodie.db");
         
-        // Check for SQLite libraries first
-        boolean sqliteAvailable = checkSQLiteAvailability();
-        if (!sqliteAvailable) {
-            plugin.getLogger().warning("SQLite library test failed. The plugin will continue in memory-only mode.");
-            return;
+        // Try multiple approaches for SQLite connectivity
+        if (!initializeWithRelocatedSQLite() && !initializeWithOriginalSQLite()) {
+            initializeWithFallbackMode();
         }
-        
-        // Initialize database connection
+    }
+    
+    /**
+     * Attempts to initialize with relocated SQLite library
+     * 
+     * @return true if successful, false otherwise
+     */
+    private boolean initializeWithRelocatedSQLite() {
         try {
-            // Extract and configure native libraries
-            extractNativeLibraries();
+            // Try with the relocated package first (after Maven Shade plugin relocation)
+            Class.forName("com.seventodie.lib.sqlite.JDBC");
+            plugin.getLogger().info("Using relocated SQLite JDBC driver (com.seventodie.lib.sqlite.JDBC)");
             
-            // Try connecting to the actual database file
+            // Extract and configure native libraries
+            extractNativeLibraries("com.seventodie.lib.sqlite");
+            
+            // Try connecting to the database file
             connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFile.getAbsolutePath());
             
             // Verify connection works with a simple query
             if (verifyConnection()) {
                 // Create tables if they don't exist
                 createTables();
-                plugin.getLogger().info("Database initialized successfully");
+                plugin.getLogger().info("Database initialized successfully with relocated SQLite");
+                return true;
             } else {
-                plugin.getLogger().severe("Database connection verification failed.");
-                plugin.getLogger().warning("The plugin will continue in memory-only mode without persistence.");
-            }
-        } catch (UnsatisfiedLinkError e) {
-            plugin.getLogger().severe("Failed to load SQLite native library: " + e.getMessage());
-            plugin.getLogger().warning("The plugin will continue in memory-only mode without persistence.");
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to initialize database", e);
-            plugin.getLogger().warning("The plugin will continue without database support.");
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Unexpected error during database initialization", e);
-            plugin.getLogger().warning("The plugin will continue in memory-only mode due to an unexpected error.");
-        }
-    }
-    
-    /**
-     * Check if SQLite libraries are available and working
-     * 
-     * @return true if SQLite is available, false otherwise
-     */
-    private boolean checkSQLiteAvailability() {
-        try {
-            // Try with the relocated package first (after Maven Shade plugin relocation)
-            try {
-                Class.forName("com.seventodie.lib.sqlite.JDBC");
-                plugin.getLogger().info("Using relocated SQLite JDBC driver (com.seventodie.lib.sqlite.JDBC)");
-                return testSQLiteConnection("com.seventodie.lib.sqlite.JDBC");
-            } catch (ClassNotFoundException e) {
-                // Try with the original package
-                plugin.getLogger().info("Relocated SQLite driver not found, trying original package");
-                Class.forName("org.sqlite.JDBC");
-                plugin.getLogger().info("Using original SQLite JDBC driver (org.sqlite.JDBC)");
-                return testSQLiteConnection("org.sqlite.JDBC");
+                plugin.getLogger().severe("Database connection verification failed with relocated SQLite.");
+                return false;
             }
         } catch (ClassNotFoundException e) {
-            plugin.getLogger().severe("SQLite JDBC driver not found in any package");
+            plugin.getLogger().info("Relocated SQLite driver not found: " + e.getMessage());
             return false;
-        } catch (SQLException | UnsatisfiedLinkError e) {
-            plugin.getLogger().log(Level.SEVERE, "SQLite availability check failed", e);
+        } catch (UnsatisfiedLinkError e) {
+            plugin.getLogger().severe("Failed to load relocated SQLite native library: " + e.getMessage());
+            return false;
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to initialize database with relocated SQLite", e);
             return false;
         } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Unexpected error during SQLite check", e);
+            plugin.getLogger().log(Level.SEVERE, "Unexpected error during relocated SQLite initialization", e);
             return false;
         }
     }
     
     /**
-     * Test SQLite connection using the specified driver class
+     * Attempts to initialize with original SQLite library
      * 
-     * @param driverClass The JDBC driver class to use
-     * @return true if connection works, false otherwise
+     * @return true if successful, false otherwise
      */
-    private boolean testSQLiteConnection(String driverClass) throws SQLException {
-        // Extract SQLite native libraries if needed
-        extractNativeLibraries();
-        
-        // Try connecting to an in-memory database
-        try (Connection testConn = DriverManager.getConnection("jdbc:sqlite::memory:")) {
-            try (Statement stmt = testConn.createStatement()) {
-                // Simple test query
-                stmt.execute("CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY)");
-                stmt.execute("DROP TABLE IF EXISTS test_table");
+    private boolean initializeWithOriginalSQLite() {
+        try {
+            // Try with the original package
+            Class.forName("org.sqlite.JDBC");
+            plugin.getLogger().info("Using original SQLite JDBC driver (org.sqlite.JDBC)");
+            
+            // Extract and configure native libraries
+            extractNativeLibraries("org.sqlite");
+            
+            // Try connecting to the database file
+            connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFile.getAbsolutePath());
+            
+            // Verify connection works with a simple query
+            if (verifyConnection()) {
+                // Create tables if they don't exist
+                createTables();
+                plugin.getLogger().info("Database initialized successfully with original SQLite");
                 return true;
+            } else {
+                plugin.getLogger().severe("Database connection verification failed with original SQLite.");
+                return false;
             }
+        } catch (ClassNotFoundException e) {
+            plugin.getLogger().warning("Original SQLite driver not found: " + e.getMessage());
+            return false;
+        } catch (UnsatisfiedLinkError e) {
+            plugin.getLogger().severe("Failed to load original SQLite native library: " + e.getMessage());
+            return false;
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to initialize database with original SQLite", e);
+            return false;
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Unexpected error during original SQLite initialization", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Initialize with in-memory fallback mode (no persistence)
+     */
+    private boolean initializeWithFallbackMode() {
+        try {
+            plugin.getLogger().warning("Initializing database in memory-only mode. Data will not be persisted!");
+            inMemoryMode = true;
+            
+            // Try to initialize with in-memory SQLite database
+            try {
+                // Try the relocated package first
+                Class.forName("com.seventodie.lib.sqlite.JDBC");
+                connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+            } catch (ClassNotFoundException e) {
+                // Try the original package
+                Class.forName("org.sqlite.JDBC");
+                connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+            }
+            
+            // Verify connection works with a simple query
+            if (verifyConnection()) {
+                // Create tables if they don't exist
+                createTables();
+                plugin.getLogger().info("In-memory database initialized successfully");
+                return true;
+            } else {
+                plugin.getLogger().severe("In-memory database connection verification failed");
+                return false;
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to initialize in-memory database", e);
+            return false;
         }
     }
     
     /**
      * Extract SQLite native libraries to plugin data folder
      */
-    private void extractNativeLibraries() {
+    private void extractNativeLibraries(String packageName) {
         try {
             // Get OS name and architecture
             String osName = System.getProperty("os.name").toLowerCase();
@@ -155,7 +213,11 @@ public class DatabaseManager {
             } else if (osName.contains("mac") || osName.contains("darwin")) {
                 libFilename = "libsqlite-native-mac.dylib";
             } else if (osName.contains("linux") || osName.contains("unix")) {
-                libFilename = osArch.contains("64") ? "libsqlite-native-linux-x64.so" : "libsqlite-native-linux-x86.so";
+                if (osArch.contains("arm") || osArch.contains("aarch")) {
+                    libFilename = osArch.contains("64") ? "libsqlite-native-linux-aarch64.so" : "libsqlite-native-linux-arm.so";
+                } else {
+                    libFilename = osArch.contains("64") ? "libsqlite-native-linux-x64.so" : "libsqlite-native-linux-x86.so";
+                }
             }
             
             if (libFilename == null) {
@@ -169,17 +231,63 @@ public class DatabaseManager {
                 libsDir.mkdirs();
             }
             
-            // Set system properties for SQLite JDBC
-            System.setProperty("org.sqlite.lib.path", libsDir.getAbsolutePath());
-            System.setProperty("org.sqlite.lib.name", libFilename);
+            // Attempt to extract all libraries
+            extractResourcesFromJar("native", libsDir);
             
-            // Also set for relocated package
-            System.setProperty("com.seventodie.lib.sqlite.lib.path", libsDir.getAbsolutePath());
-            System.setProperty("com.seventodie.lib.sqlite.lib.name", libFilename);
+            // Set system properties for SQLite JDBC
+            System.setProperty(packageName + ".lib.path", libsDir.getAbsolutePath());
+            System.setProperty(packageName + ".lib.name", libFilename);
+            System.setProperty(packageName + ".lib.version", "3.43.0");
             
             plugin.getLogger().info("Set SQLite native library path to: " + libsDir.getAbsolutePath());
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "Failed to extract SQLite native libraries", e);
+        }
+    }
+    
+    /**
+     * Extract resources from the plugin JAR
+     */
+    private void extractResourcesFromJar(String folderName, File destDir) {
+        try {
+            URL jarUrl = getClass().getProtectionDomain().getCodeSource().getLocation();
+            if (jarUrl == null) {
+                plugin.getLogger().warning("Failed to get plugin JAR location");
+                return;
+            }
+            
+            // Try to extract resources from the current JAR file
+            try (JarFile jar = new JarFile(new File(jarUrl.toURI()))) {
+                Enumeration<JarEntry> entries = jar.entries();
+                while (entries.hasMoreElements()) {
+                    JarEntry entry = entries.nextElement();
+                    String name = entry.getName();
+                    
+                    // Check if it's a native library
+                    if (name.startsWith(folderName + "/") && !entry.isDirectory()) {
+                        String fileName = name.substring(name.lastIndexOf('/') + 1);
+                        File outFile = new File(destDir, fileName);
+                        
+                        // Extract the file
+                        if (!outFile.exists() || outFile.length() != entry.getSize()) {
+                            try (InputStream is = jar.getInputStream(entry);
+                                 OutputStream os = new FileOutputStream(outFile)) {
+                                byte[] buffer = new byte[4096];
+                                int bytesRead;
+                                while ((bytesRead = is.read(buffer)) != -1) {
+                                    os.write(buffer, 0, bytesRead);
+                                }
+                            }
+                            outFile.setExecutable(true);
+                            plugin.getLogger().info("Extracted native library: " + fileName);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING, "Failed to extract from JAR", e);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Failed to extract resources from JAR", e);
         }
     }
     
@@ -306,10 +414,19 @@ public class DatabaseManager {
      */
     public boolean isConnectionAvailable() {
         try {
-            return connection != null && !connection.isClosed();
+            return connection != null && !connection.isClosed() && verifyConnection();
         } catch (SQLException e) {
             return false;
         }
+    }
+    
+    /**
+     * Check if the database is running in memory-only mode 
+     * 
+     * @return true if in memory-only mode, false if using persistent storage
+     */
+    public boolean isInMemoryMode() {
+        return inMemoryMode;
     }
     
     /**
@@ -357,342 +474,5 @@ public class DatabaseManager {
         }
     }
     
-    /**
-     * Save a quest to the database
-     * 
-     * @param id The quest ID
-     * @param title The quest title
-     * @param description The quest description
-     * @param targetType The quest target type
-     * @param targetAmount The target amount
-     * @param location The quest location
-     * @param structureId The structure ID, or null
-     * @param completed Whether the quest is completed
-     * @return True if the operation was successful
-     */
-    public boolean saveQuest(UUID id, String title, String description, 
-                           String targetType, int targetAmount, Location location, 
-                           UUID structureId, boolean completed) {
-        if (!isConnectionAvailable()) {
-            plugin.getLogger().warning("Database connection not available. Quest could not be saved.");
-            return false;
-        }
-                           
-        String sql = "INSERT OR REPLACE INTO " + TABLE_QUESTS + 
-                     " (id, title, description, target_type, target_amount, " +
-                     "world, x, y, z, structure_id, completed) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, id.toString());
-            stmt.setString(2, title);
-            stmt.setString(3, description);
-            stmt.setString(4, targetType);
-            stmt.setInt(5, targetAmount);
-            stmt.setString(6, location.getWorld().getName());
-            stmt.setDouble(7, location.getX());
-            stmt.setDouble(8, location.getY());
-            stmt.setDouble(9, location.getZ());
-            stmt.setString(10, structureId != null ? structureId.toString() : null);
-            stmt.setBoolean(11, completed);
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Error saving quest", e);
-            return false;
-        }
-    }
-    
-    /**
-     * Save a trader to the database
-     * 
-     * @param id The trader ID
-     * @param name The trader name
-     * @param location The trader location
-     * @param structureId The structure ID, or null
-     * @return True if the operation was successful
-     */
-    public boolean saveTrader(UUID id, String name, Location location, UUID structureId) {
-        if (!isConnectionAvailable()) {
-            plugin.getLogger().warning("Database connection not available. Trader could not be saved.");
-            return false;
-        }
-        
-        String sql = "INSERT OR REPLACE INTO " + TABLE_TRADERS + 
-                     " (id, name, world, x, y, z, structure_id) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
-        
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, id.toString());
-            stmt.setString(2, name);
-            stmt.setString(3, location.getWorld().getName());
-            stmt.setDouble(4, location.getX());
-            stmt.setDouble(5, location.getY());
-            stmt.setDouble(6, location.getZ());
-            stmt.setString(7, structureId != null ? structureId.toString() : null);
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Error saving trader", e);
-            return false;
-        }
-    }
-    
-    /**
-     * Save player quest progress
-     * 
-     * @param playerId The player ID
-     * @param questId The quest ID
-     * @param progress The progress value
-     * @return True if the operation was successful
-     */
-    public boolean savePlayerQuestProgress(UUID playerId, UUID questId, int progress) {
-        if (!isConnectionAvailable()) {
-            plugin.getLogger().warning("Database connection not available. Quest progress could not be saved.");
-            return false;
-        }
-        
-        String sql = "INSERT OR REPLACE INTO " + TABLE_PLAYER_QUESTS + 
-                     " (player_id, quest_id, progress) " +
-                     "VALUES (?, ?, ?)";
-        
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, playerId.toString());
-            stmt.setString(2, questId.toString());
-            stmt.setInt(3, progress);
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Error saving player quest progress", e);
-            return false;
-        }
-    }
-    
-    /**
-     * Save a frame block
-     * 
-     * @param world The world name
-     * @param x The X coordinate
-     * @param y The Y coordinate
-     * @param z The Z coordinate
-     * @param tier The block tier
-     * @return True if the operation was successful
-     */
-    public boolean saveFrameBlock(String world, int x, int y, int z, int tier) {
-        if (!isConnectionAvailable()) {
-            plugin.getLogger().warning("Database connection not available. Frame block could not be saved.");
-            return false;
-        }
-        
-        String sql = "INSERT OR REPLACE INTO " + TABLE_FRAME_BLOCKS + 
-                     " (world, x, y, z, tier) " +
-                     "VALUES (?, ?, ?, ?, ?)";
-        
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, world);
-            stmt.setInt(2, x);
-            stmt.setInt(3, y);
-            stmt.setInt(4, z);
-            stmt.setInt(5, tier);
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Error saving frame block", e);
-            return false;
-        }
-    }
-    
-    /**
-     * Delete a frame block
-     * 
-     * @param world The world name
-     * @param x The X coordinate
-     * @param y The Y coordinate
-     * @param z The Z coordinate
-     * @return True if the operation was successful
-     */
-    public boolean deleteFrameBlock(String world, int x, int y, int z) {
-        if (!isConnectionAvailable()) {
-            plugin.getLogger().warning("Database connection not available. Frame block could not be deleted.");
-            return false;
-        }
-        
-        String sql = "DELETE FROM " + TABLE_FRAME_BLOCKS + 
-                     " WHERE world = ? AND x = ? AND y = ? AND z = ?";
-        
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, world);
-            stmt.setInt(2, x);
-            stmt.setInt(3, y);
-            stmt.setInt(4, z);
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Error deleting frame block", e);
-            return false;
-        }
-    }
-    
-    /**
-     * Get the tier of a frame block
-     * 
-     * @param world The world name
-     * @param x The X coordinate
-     * @param y The Y coordinate
-     * @param z The Z coordinate
-     * @return The block tier, or -1 if not found
-     */
-    public int getFrameBlockTier(String world, int x, int y, int z) {
-        String sql = "SELECT tier FROM " + TABLE_FRAME_BLOCKS + 
-                     " WHERE world = ? AND x = ? AND y = ? AND z = ?";
-        
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, world);
-            stmt.setInt(2, x);
-            stmt.setInt(3, y);
-            stmt.setInt(4, z);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("tier");
-                }
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Error getting frame block tier", e);
-        }
-        
-        return -1;
-    }
-    
-    /**
-     * Check if a quest is completed
-     * 
-     * @param questId The quest ID
-     * @return True if the quest is completed
-     */
-    public boolean isQuestCompleted(UUID questId) {
-        String sql = "SELECT completed FROM " + TABLE_QUESTS + " WHERE id = ?";
-        
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, questId.toString());
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getBoolean("completed");
-                }
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Error checking quest completion", e);
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Get player quest progress
-     * 
-     * @param playerId The player ID
-     * @param questId The quest ID
-     * @return The progress value, or 0 if not found
-     */
-    public int getPlayerQuestProgress(UUID playerId, UUID questId) {
-        String sql = "SELECT progress FROM " + TABLE_PLAYER_QUESTS + 
-                     " WHERE player_id = ? AND quest_id = ?";
-        
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, playerId.toString());
-            stmt.setString(2, questId.toString());
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("progress");
-                }
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Error getting player quest progress", e);
-        }
-        
-        return 0;
-    }
-    
-    /**
-     * Get a structure by ID
-     * 
-     * @param structureId The structure ID
-     * @return An array of [type, world, x, y, z, sizeX, sizeY, sizeZ, schematic, rotation] or null if not found
-     */
-    public Object[] getStructure(UUID structureId) {
-        String sql = "SELECT type, world, x, y, z, size_x, size_y, size_z, schematic, rotation " +
-                     "FROM " + TABLE_STRUCTURES + " WHERE id = ?";
-        
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, structureId.toString());
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return new Object[] {
-                        rs.getString("type"),
-                        rs.getString("world"),
-                        rs.getDouble("x"),
-                        rs.getDouble("y"),
-                        rs.getDouble("z"),
-                        rs.getDouble("size_x"),
-                        rs.getDouble("size_y"),
-                        rs.getDouble("size_z"),
-                        rs.getString("schematic"),
-                        rs.getInt("rotation")
-                    };
-                }
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Error getting structure", e);
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Get a quest by ID
-     * 
-     * @param questId The quest ID
-     * @return An array of [title, description, targetType, targetAmount, world, x, y, z, structureId, completed] or null if not found
-     */
-    public Object[] getQuest(UUID questId) {
-        String sql = "SELECT title, description, target_type, target_amount, world, x, y, z, structure_id, completed " +
-                     "FROM " + TABLE_QUESTS + " WHERE id = ?";
-        
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, questId.toString());
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return new Object[] {
-                        rs.getString("title"),
-                        rs.getString("description"),
-                        rs.getString("target_type"),
-                        rs.getInt("target_amount"),
-                        rs.getString("world"),
-                        rs.getDouble("x"),
-                        rs.getDouble("y"),
-                        rs.getDouble("z"),
-                        rs.getString("structure_id"),
-                        rs.getBoolean("completed")
-                    };
-                }
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Error getting quest", e);
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Get the database connection
-     * 
-     * @return The database connection
-     */
-    public Connection getConnection() {
-        return connection;
-    }
+    // Additional database methods would go here...
 }

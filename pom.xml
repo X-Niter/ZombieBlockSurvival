@@ -116,9 +116,27 @@
         <defaultGoal>clean package</defaultGoal>
         <finalName>${project.name}-${project.version}</finalName>
         <resources>
+            <!-- Filter text resources -->
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
+                <excludes>
+                    <exclude>**/*.so</exclude>
+                    <exclude>**/*.dll</exclude>
+                    <exclude>**/*.dylib</exclude>
+                    <exclude>**/*.jnilib</exclude>
+                </excludes>
+            </resource>
+            <!-- Copy binary resources without filtering -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*.so</include>
+                    <include>**/*.dll</include>
+                    <include>**/*.dylib</include>
+                    <include>**/*.jnilib</include>
+                </includes>
             </resource>
         </resources>
         <plugins>
