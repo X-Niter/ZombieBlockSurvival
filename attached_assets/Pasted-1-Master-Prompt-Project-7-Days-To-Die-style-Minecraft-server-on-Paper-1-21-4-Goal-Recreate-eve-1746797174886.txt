@@ -1,0 +1,199 @@
+1. Master Prompt
+Project: “7 Days To Die”‑style Minecraft server on Paper 1.21.4
+
+Goal: Recreate every core system of 7DtD inside a vanilla‑compatible Paper fork: frame‑upgrading blocks, connected roads and zoned structures, randomized trader outposts, NPCs with quest systems, day/night restrictions, regenerating loot‑buildings, and authentic biomes.
+
+Requirements:
+
+Custom blocks & tools
+
+A “Frame Block” that upgrades through hammer hits into wood, cobble, rebar, concrete tiers—just like 7DtD.
+
+Tool‑tiers (stone, iron, steel) that determine max upgrade level.
+
+World Generation
+
+Fully connected road network (highways, side streets) with algorithmic branching into residential, commercial, industrial zones.
+
+Prefab structures (houses, apartments, factories) snapped to roads.
+
+Biomes mapped 1:1 to 7DtD (forest, desert, snow, wasteland, grass) with matching block palettes.
+
+Trader Outposts
+
+Spawn one “Trader Building” every ~300 blocks in world coords.
+
+Day‑only entry: at night (Minecraft time ≥13000), players are forcibly ejected, door-locked.
+
+NPC inside with randomized 7DtD‑style skins (male/female), voice‑line system, merchant GUI, tiered quest progression.
+
+Quest & Loot System
+
+Quests tied to specific structures (house IDs). Trigger via holographic marker. Upon completion, building resets—loot respawns, blocks revert.
+
+Special “dig” quests: marked ground patches that regenerate.
+
+Implementation Notes
+
+All in Java Paper plugin(s), optionally leveraging Citizens2 for NPCs, MythicMobs or custom events for AI behaviors, and WorldEdit schematics for structure/loot regeneration.
+
+Heavy use of Resource Packs (block models, item textures, sound files for trader voice‑lines).
+
+Optimize with packet‑level tweaks (via ProtocolLib) for smooth custom block handling and world‑gen streaming.
+
+Deliverables: Full plugin source repos, resource pack, config templates, and deployment guide.
+
+2. Component‑by‑Component Breakdown
+A. Frame‑Upgrading Blocks
+Mechanics:
+
+Define a new block type (“frame”) via CustomBlockData or BlockDataManipulator in Paper.
+
+Track each block’s current tier in its BlockState’s persistent metadata.
+
+On player interaction with a valid tool, increment tier (0→1→2→3…), swap block to corresponding model/textured variant via efficient block#setType or Packet play.
+
+Tools:
+
+Use ItemMeta & NBT tags to define “stone hammer,” “iron hammer,” “steel hammer.”
+
+Enforce if (item.hasTag("maxTier") >= blockTier) … logic.
+
+B. Procedural Road & Structure Generation
+Road Network:
+
+Use a Poisson‑Disk sampling or grid‑graph algorithm at chunk‑gen time to place roads:
+
+Main arteries every 256–512 blocks.
+
+Secondary spurs branching off with random turn probability.
+
+Paint road blocks (asphalt textures) and curbs using a custom ChunkGenerator via Paper’s world‑gen API.
+
+Zones & Buildings:
+
+Predefine structure “schematics” (WorldEdit .schem or custom JSON) in three families: residential, industrial, commercial.
+
+At each road intersection or dead‑end, randomly choose a schematic, rotate it to align, and paste it with schematic‑paste code.
+
+Store each building’s unique ID in a database table (building_id → location, type).
+
+C. Trader Outposts & NPCs
+Placement:
+
+On world init or /generateTraders, scan every 300×300 block tile, randomly pick one point in each tile to place a “Trader Building” schematic.
+
+Day/Night Behavior:
+
+Listen to World#time events.
+
+At time ≥13,000: loop all players inside the building’s cuboid; teleport them outside, lock doors (via BlockFlags or cancellation of door‑open events).
+
+At daybreak (<13,000): unlock automatically.
+
+NPC Implementation:
+
+Use Citizens2 to spawn an NPC with:
+
+Random skin from a 7DtD‑themed skin pool
+
+Denizen or a custom plugin event handler for quest dialogue and merchant trade GUI.
+
+Voice: serve custom .ogg files via resource pack. On NPC interaction, play randomized lines using player.playSound(...).
+
+D. Quest & Loot Regeneration
+Quest Assignment:
+
+House quest types stored in a YAML/JSON config (house_001 → questDef {type: killZeds, target: 10})
+
+Use HolographicDisplays to show floating “! Quest” marker at house entrance.
+
+Completion & Reset:
+
+On quest finish, trigger:
+
+Reset loot chests: Chest#clear(); Chest#populate(lootTable)
+
+Reset broken doors/windows: re‑paste building via schematic or track changed blocks in a map and revert them.
+
+Dig Quests:
+
+Marker placed at ground location (custom block highlight).
+
+On completion, schedule a BukkitRunnable to undo any block changes in radius back to original height profile.
+
+E. Biome Mapping & Block Palette
+Biomes:
+
+Use OpenTerrainGenerator or TrueWorldGenerator integration with Paper to define custom biome layering:
+
+Map vanilla biome IDs to 7DtD equivalents: Forest→Forest, Plains→Grassland, Desert→Desert, Snow→Snow, Badlands→Wasteland.
+
+Override block palettes per biome for foliage, grass color, surface blocks.
+
+Textures & Models:
+
+Resource pack with models/block/ definitions, custom .png sheets for roads, frame blocks, weapons.
+
+Weapon items (higher TTK/wear) as custom ModelData items in a single resource pack.
+
+F. Performance & Packet Tweaks
+ProtocolLib:
+
+Intercept block update packets to show the correct block‑tier without full chunk regeneration.
+
+Caching & Async:
+
+Offload schematic pastes and DB writes to asynchronous tasks.
+
+Preload trader positions in memory.
+
+Getting Started Checklist
+Plan & Schematics
+
+Draft all schematics for buildings, frame‑block tiers, trader huts.
+
+Resource Pack
+
+Gather 7DtD textures; map onto Minecraft block IDs + custom model data.
+
+Core Plugin Skeleton
+
+Initialize Maven/Gradle project targeting Paper 1.21.4 API.
+
+WorldGen Module
+
+Implement custom ChunkGenerator for roads & zones.
+
+Block API Module
+
+Code “frame” block logic and tool‑tier interactions.
+
+NPC & Trader Module
+
+Integrate Citizens2, set up trader spawn & behavior.
+
+Quest Module
+
+Hologram markers, quest-tracking, building‑reset logic.
+
+Biome Module
+
+Hook into world‑gen plugin, apply biome maps.
+
+Sound & Voice
+
+Add .ogg voice files, register them in sounds.json.
+
+Testing & Tuning
+
+Spin up a local server, jog roads, smash frames, test day‑night trader ejections, quest resets, biome palettes.
+
+You’ve got an epic mountain to climb, but every step is just code.
+Think of it like hammer‑upgrading a frame block—tier 0 to tier 3—in bite‑sized hits.
+Start small (custom frame block), then scaffold roads, then buildings, then traders, then quests, then biomes.
+By layering each system neatly, you’ll have a true “7DtD in Minecraft” experience—no sugar‑coating, just relentless focus and good old fashioned craftsmanship.
+
+Remember: every legacy system in 7DtD has a Minecraft analogue. Question every design choice, validate with tests, and don’t be afraid to iterate.
+
+Now break that top‑level prompt into tickets in your favorite tracker and let’s get hacking!
