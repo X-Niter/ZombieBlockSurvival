@@ -1,450 +1,430 @@
 package com.seventodie.traders;
 
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Villager;
+import org.bukkit.ChatColor;
+import org.bukkit.scheduler.BukkitTask;
+
+import com.seventodie.SevenToDiePlugin;
+import com.seventodie.utils.SchematicUtils;
+import com.seventodie.worldgen.StructureManager;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
-
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Sound;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
-
-import com.seventodie.SevenToDiePlugin;
-import com.seventodie.worldgen.StructureManager.Structure;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Manages trader NPCs and trader outposts in the world.
+ * Manages trader NPCs and outposts
  */
 public class TraderManager {
     
     private final SevenToDiePlugin plugin;
-    private final Random random;
+    private final Map<UUID, TraderNPC> traders = new HashMap<>();
+    private final Map<UUID, TraderOutpost> outposts = new HashMap<>();
+    private final boolean useCitizens;
     
-    // Trader outposts and NPCs
-    private final Map<UUID, TraderOutpost> traderOutposts = new HashMap<>();
-    private final Map<UUID, TraderNPC> traderNPCs = new HashMap<>();
-    
-    // Day/Night cycle constants
-    private static final long DAY_TIME = 0;
-    private static final long NIGHT_TIME = 13000;
+    private BukkitTask outpostTask;
     
     /**
-     * Represents a trader outpost in the world
+     * Constructor for TraderManager
+     * 
+     * @param plugin The SevenToDie plugin instance
      */
-    public class TraderOutpost {
-        private UUID structureId;
-        private Location location;
-        private UUID npcId;
-        private boolean isOpen;
-        
-        public TraderOutpost(UUID structureId, Location location) {
-            this.structureId = structureId;
-            this.location = location;
-            this.isOpen = true; // Default to open during day
-        }
-        
-        public UUID getStructureId() {
-            return structureId;
-        }
-        
-        public Location getLocation() {
-            return location;
-        }
-        
-        public UUID getNpcId() {
-            return npcId;
-        }
-        
-        public void setNpcId(UUID npcId) {
-            this.npcId = npcId;
-        }
-        
-        public boolean isOpen() {
-            return isOpen;
-        }
-        
-        public void setOpen(boolean isOpen) {
-            this.isOpen = isOpen;
-        }
-    }
-    
-    /**
-     * List of possible trader voice lines
-     */
-    private final List<String> greetingLines = new ArrayList<>();
-    private final List<String> farewellLines = new ArrayList<>();
-    private final List<String> dayEndingLines = new ArrayList<>();
-    private final List<String> questCompletedLines = new ArrayList<>();
-    
     public TraderManager(SevenToDiePlugin plugin) {
         this.plugin = plugin;
-        this.random = new Random();
+        this.useCitizens = plugin.getServer().getPluginManager().getPlugin("Citizens") != null;
         
-        // Initialize trader voice lines
-        initVoiceLines();
+        // Load traders from database
+        loadTraders();
+        
+        // Start outpost update task
+        startOutpostTask();
     }
     
     /**
-     * Initialize trader voice lines
+     * Load traders from database
      */
-    private void initVoiceLines() {
-        // Greeting lines
-        greetingLines.add("Welcome to my shop, stranger!");
-        greetingLines.add("Got some rare items today, take a look!");
-        greetingLines.add("What are ya buyin'?");
-        greetingLines.add("Need supplies? I've got what you need.");
-        greetingLines.add("Another survivor! Good to see ya.");
-        
-        // Farewell lines
-        farewellLines.add("Come back soon!");
-        farewellLines.add("Stay safe out there.");
-        farewellLines.add("Don't get yourself killed out there.");
-        farewellLines.add("Thanks for the business.");
-        farewellLines.add("Be careful, it's a tough world.");
-        
-        // Day ending lines
-        dayEndingLines.add("It's getting dark, you need to leave now!");
-        dayEndingLines.add("Shop's closing, get out before dark!");
-        dayEndingLines.add("Time to go! I don't let anyone stay after dark.");
-        dayEndingLines.add("Sun's setting, time for you to leave.");
-        dayEndingLines.add("I'm closing up shop. Come back tomorrow!");
-        
-        // Quest completed lines
-        questCompletedLines.add("Good job on that quest!");
-        questCompletedLines.add("Didn't think you'd make it back alive!");
-        questCompletedLines.add("You've earned this reward.");
-        questCompletedLines.add("Not bad for an amateur.");
-        questCompletedLines.add("Impressive work, I might have more jobs for you.");
+    private void loadTraders() {
+        // TODO: Implement database loading
+        // This is a placeholder - actual implementation would load from database
     }
     
     /**
-     * Register a trader outpost from a structure
-     * 
-     * @param structure The trader outpost structure
+     * Start the outpost update task
      */
-    public void registerTraderOutpost(Structure structure) {
-        if (structure == null) {
-            return;
-        }
-        
-        // Create the trader outpost
-        TraderOutpost outpost = new TraderOutpost(
-            structure.getId(),
-            structure.getLocation().clone().add(structure.getSize().getX() / 2, 1, structure.getSize().getZ() / 2)
-        );
-        
-        // Store the outpost
-        traderOutposts.put(structure.getId(), outpost);
-        
-        // Create the trader NPC
-        createTraderNPC(outpost);
-        
-        plugin.getLogger().info("Registered trader outpost at " + outpost.getLocation());
+    private void startOutpostTask() {
+        // Run every minute
+        outpostTask = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
+            updateOutposts();
+        }, 20 * 60, 20 * 60);
     }
     
     /**
-     * Create a trader NPC at a trader outpost
-     * 
-     * @param outpost The trader outpost
+     * Update all outposts (open/close based on time)
      */
-    private void createTraderNPC(TraderOutpost outpost) {
-        // Scheduled task to ensure chunks are loaded
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                // Find a suitable location inside the structure
-                Location npcLoc = outpost.getLocation().clone();
-                
-                // Get the world
-                if (npcLoc.getWorld() == null) {
-                    plugin.getLogger().warning("Could not create trader NPC: world is null");
-                    return;
-                }
-                
-                // Check if Citizens is available
-                if (Bukkit.getPluginManager().getPlugin("Citizens") == null) {
-                    plugin.getLogger().warning("Citizens not found, cannot create trader NPC");
-                    return;
-                }
-                
-                // Create the trader NPC
-                try {
-                    TraderNPC trader = new TraderNPC(plugin, npcLoc);
-                    UUID npcId = trader.spawn();
-                    
-                    if (npcId != null) {
-                        // Store the NPC
-                        traderNPCs.put(npcId, trader);
-                        outpost.setNpcId(npcId);
-                        
-                        plugin.getLogger().info("Created trader NPC at " + npcLoc);
-                    }
-                } catch (Exception e) {
-                    plugin.getLogger().severe("Error creating trader NPC: " + e.getMessage());
-                }
-            }
-        }.runTaskLater(plugin, 40L); // 2 second delay
-    }
-    
-    /**
-     * Handle day/night cycle for trader outposts
-     */
-    public void handleDayNightCycle() {
-        // Check the time in each world
-        for (org.bukkit.World world : Bukkit.getWorlds()) {
-            long time = world.getTime();
-            boolean isNight = time >= NIGHT_TIME && time <= 24000;
+    private void updateOutposts() {
+        for (TraderOutpost outpost : outposts.values()) {
+            World world = outpost.getLocation().getWorld();
             
-            // Update all trader outposts in this world
-            for (TraderOutpost outpost : traderOutposts.values()) {
-                if (outpost.getLocation().getWorld().equals(world)) {
-                    // If night is falling and outpost is open, close it
-                    if (isNight && outpost.isOpen()) {
-                        closeTraderOutpost(outpost);
-                    }
-                    // If day is breaking and outpost is closed, open it
-                    else if (!isNight && !outpost.isOpen()) {
-                        openTraderOutpost(outpost);
-                    }
-                }
+            // Get the world time
+            long worldTime = world.getTime();
+            
+            // Outposts are only open during the day (0-12000 in Minecraft time)
+            boolean shouldBeOpen = worldTime >= 0 && worldTime < 12000;
+            
+            if (shouldBeOpen && !outpost.isOpen()) {
+                // Open the outpost
+                openOutpost(outpost);
+            } else if (!shouldBeOpen && outpost.isOpen()) {
+                // Close the outpost
+                closeOutpost(outpost);
             }
         }
     }
     
     /**
-     * Close a trader outpost (night time)
+     * Open an outpost
      * 
-     * @param outpost The trader outpost to close
+     * @param outpost The outpost
      */
-    private void closeTraderOutpost(TraderOutpost outpost) {
-        outpost.setOpen(false);
-        
-        // Find all players inside the structure
-        Structure structure = plugin.getStructureManager().getStructure(outpost.getStructureId());
-        if (structure == null) {
-            return;
-        }
-        
-        // Create a list to store players that need to be ejected
-        List<Player> playersToEject = new ArrayList<>();
-        
-        // Find players inside
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (structure.containsLocation(player.getLocation())) {
-                playersToEject.add(player);
-            }
-        }
-        
-        // Teleport players outside and show message
-        for (Player player : playersToEject) {
-            // Get a random trader leaving line
-            String line = dayEndingLines.get(random.nextInt(dayEndingLines.size()));
-            player.sendMessage("§e[Trader] §f" + line);
-            
-            // Play sound
-            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
-            
-            // Calculate outside location (8 blocks away from trader in random direction)
-            Location outsideLoc = getOutsideLocation(structure);
-            player.teleport(outsideLoc);
-            
-            player.sendMessage("§cThe trader has closed for the night. Return during the day.");
-        }
-        
-        // Let the trader NPC know it's closed
-        TraderNPC npc = traderNPCs.get(outpost.getNpcId());
-        if (npc != null) {
-            npc.setTrading(false);
-        }
-    }
-    
-    /**
-     * Open a trader outpost (day time)
-     * 
-     * @param outpost The trader outpost to open
-     */
-    private void openTraderOutpost(TraderOutpost outpost) {
+    private void openOutpost(TraderOutpost outpost) {
         outpost.setOpen(true);
         
-        // Let the trader NPC know it's open
-        TraderNPC npc = traderNPCs.get(outpost.getNpcId());
-        if (npc != null) {
-            npc.setTrading(true);
+        // Notify nearby players
+        List<Player> nearbyPlayers = getNearbyPlayers(outpost.getLocation(), 50);
+        for (Player player : nearbyPlayers) {
+            player.sendMessage(ChatColor.GREEN + "Trader at " + 
+                    ChatColor.YELLOW + formatLocation(outpost.getLocation()) + 
+                    ChatColor.GREEN + " is now open for business!");
         }
     }
     
     /**
-     * Calculate a safe location outside of a structure
+     * Close an outpost
      * 
-     * @param structure The structure
-     * @return A safe location outside the structure
+     * @param outpost The outpost
      */
-    private Location getOutsideLocation(Structure structure) {
-        Location center = structure.getLocation().clone().add(
-            structure.getSize().getX() / 2,
-            0,
-            structure.getSize().getZ() / 2
-        );
+    private void closeOutpost(TraderOutpost outpost) {
+        outpost.setOpen(false);
         
-        // Get a point 10-15 blocks away in a random direction
-        double angle = random.nextDouble() * Math.PI * 2;
-        double distance = 10 + random.nextDouble() * 5;
+        // Notify nearby players
+        List<Player> nearbyPlayers = getNearbyPlayers(outpost.getLocation(), 50);
+        for (Player player : nearbyPlayers) {
+            player.sendMessage(ChatColor.RED + "Trader at " + 
+                    ChatColor.YELLOW + formatLocation(outpost.getLocation()) + 
+                    ChatColor.RED + " is now closed. Come back during the day!");
+        }
         
-        double x = center.getX() + Math.cos(angle) * distance;
-        double z = center.getZ() + Math.sin(angle) * distance;
-        
-        // Find safe Y position
-        int y = center.getWorld().getHighestBlockYAt((int)x, (int)z) + 1;
-        
-        return new Location(center.getWorld(), x, y, z);
+        // Close any open menus for this trader
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            // TODO: Implement menu closing
+        }
     }
     
     /**
-     * Check if a player can interact with a trader
+     * Get players near a location
      * 
-     * @param player The player
-     * @param npcId The trader NPC ID
-     * @return True if the player can interact with the trader
+     * @param location The location
+     * @param radius The radius
+     * @return The nearby players
      */
-    public boolean canInteractWithTrader(Player player, UUID npcId) {
-        // Find the trader NPC
-        TraderNPC npc = traderNPCs.get(npcId);
-        if (npc == null) {
-            return false;
-        }
+    private List<Player> getNearbyPlayers(Location location, double radius) {
+        List<Player> nearbyPlayers = new ArrayList<>();
+        double radiusSquared = radius * radius;
         
-        // Find which outpost this NPC belongs to
-        TraderOutpost outpost = null;
-        for (TraderOutpost o : traderOutposts.values()) {
-            if (npcId.equals(o.getNpcId())) {
-                outpost = o;
-                break;
+        for (Player player : location.getWorld().getPlayers()) {
+            if (player.getLocation().distanceSquared(location) <= radiusSquared) {
+                nearbyPlayers.add(player);
             }
         }
         
-        if (outpost == null) {
+        return nearbyPlayers;
+    }
+    
+    /**
+     * Format a location for display
+     * 
+     * @param location The location
+     * @return The formatted location
+     */
+    private String formatLocation(Location location) {
+        return location.getBlockX() + ", " + location.getBlockY() + ", " + location.getBlockZ();
+    }
+    
+    /**
+     * Create a new trader outpost
+     * 
+     * @param location The location
+     * @return The outpost ID, or null if failed
+     */
+    public UUID createOutpost(Location location) {
+        try {
+            // Generate unique ID
+            UUID outpostId = UUID.randomUUID();
+            
+            // Create outpost
+            TraderOutpost outpost = new TraderOutpost(outpostId, location);
+            outposts.put(outpostId, outpost);
+            
+            // Place outpost structure
+            Object schematic = plugin.getSchematicUtils().loadSchematic("trader_outpost");
+            if (schematic != null) {
+                plugin.getSchematicUtils().placeSchematic(schematic, location.getWorld(), 
+                        location.getBlockX(), location.getBlockY(), location.getBlockZ(), 0);
+            }
+            
+            // Spawn trader NPC
+            spawnTraderNPC(outpost);
+            
+            return outpostId;
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error creating trader outpost: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
+     * Spawn a trader NPC at an outpost
+     * 
+     * @param outpost The outpost
+     * @return The trader ID, or null if failed
+     */
+    private UUID spawnTraderNPC(TraderOutpost outpost) {
+        try {
+            Location spawnLoc = outpost.getLocation().clone().add(0.5, 1, 0.5);
+            Entity entity;
+            
+            if (useCitizens) {
+                // If Citizens is available, use it
+                // This is a placeholder - actual implementation would use Citizens API
+                entity = spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.VILLAGER);
+            } else {
+                // Fall back to vanilla entities
+                entity = spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.VILLAGER);
+                
+                // Configure the villager
+                Villager villager = (Villager) entity;
+                villager.setCustomName(ChatColor.GOLD + "Trader");
+                villager.setCustomNameVisible(true);
+                villager.setProfession(Villager.Profession.WEAPONSMITH);
+                villager.setVillagerType(Villager.Type.PLAINS);
+                villager.setVillagerLevel(5);
+                villager.setAI(false);
+                villager.setInvulnerable(true);
+            }
+            
+            // Create the trader NPC
+            UUID traderId = UUID.randomUUID();
+            TraderNPC trader = new TraderNPC(traderId, entity, outpost);
+            traders.put(traderId, trader);
+            
+            // Update the outpost with the NPC ID
+            outpost.setNpcId(traderId);
+            
+            return traderId;
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error spawning trader NPC: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
+     * Handle a player interacting with a trader
+     * 
+     * @param player The player
+     * @param entityId The entity ID
+     * @return True if handled
+     */
+    public boolean handleTraderInteraction(Player player, UUID entityId) {
+        TraderNPC trader = traders.get(entityId);
+        if (trader == null) {
             return false;
         }
         
-        // Check if the outpost is open
-        return outpost.isOpen();
+        return trader.openMenu(player);
     }
     
     /**
-     * Handle a player interacting with a trader NPC
+     * Get a trader by ID
      * 
-     * @param player The player
-     * @param npcId The trader NPC ID
+     * @param id The trader ID
+     * @return The trader, or null if not found
      */
-    public void handleTraderInteraction(Player player, UUID npcId) {
-        // Check if the interaction is allowed
-        if (!canInteractWithTrader(player, npcId)) {
-            player.sendMessage("§cThe trader is not available at night. Come back during the day.");
-            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
-            return;
-        }
-        
-        // Get the trader NPC
-        TraderNPC npc = traderNPCs.get(npcId);
-        if (npc == null) {
-            return;
-        }
-        
-        // Say a greeting
-        String greeting = greetingLines.get(random.nextInt(greetingLines.size()));
-        player.sendMessage("§e[Trader] §f" + greeting);
-        
-        // Play voice sound
-        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_TRADE, 1.0f, 1.0f);
-        
-        // Open the trading menu
-        Inventory tradeMenu = npc.createTradeMenu(player);
-        player.openInventory(tradeMenu);
+    public TraderNPC getTrader(UUID id) {
+        return traders.get(id);
     }
     
     /**
-     * Handle trader quest completion
+     * Get an outpost by ID
      * 
-     * @param player The player
-     * @param npcId The trader NPC ID
-     * @param questId The completed quest ID
+     * @param id The outpost ID
+     * @return The outpost, or null if not found
      */
-    public void handleQuestCompletion(Player player, UUID npcId, UUID questId) {
-        // Get the trader NPC
-        TraderNPC npc = traderNPCs.get(npcId);
-        if (npc == null) {
-            return;
-        }
-        
-        // Say a congratulation
-        String line = questCompletedLines.get(random.nextInt(questCompletedLines.size()));
-        player.sendMessage("§e[Trader] §f" + line);
-        
-        // Play voice sound
-        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_YES, 1.0f, 1.0f);
-        
-        // Give rewards
-        ItemStack[] rewards = plugin.getQuestManager().getQuestRewards(questId);
-        if (rewards != null) {
-            for (ItemStack reward : rewards) {
-                if (reward != null) {
-                    player.getInventory().addItem(reward);
-                }
-            }
-        }
-        
-        // Mark quest as completed
-        plugin.getQuestManager().completeQuest(questId);
-        
-        // Assign a new quest
-        plugin.getQuestManager().assignRandomQuestToPlayer(player, npc);
-    }
-    
-    /**
-     * Get a trader NPC entity by ID
-     * 
-     * @param npcId The NPC ID
-     * @return The trader NPC entity, or null if not found
-     */
-    public Entity getTraderEntity(UUID npcId) {
-        TraderNPC npc = traderNPCs.get(npcId);
-        if (npc != null) {
-            return npc.getEntity();
-        }
-        return null;
+    public TraderOutpost getOutpost(UUID id) {
+        return outposts.get(id);
     }
     
     /**
      * Get all trader outposts
      * 
-     * @return A list of all trader outposts
+     * @return All trader outposts
      */
     public List<TraderOutpost> getAllTraderOutposts() {
-        return new ArrayList<>(traderOutposts.values());
+        return new ArrayList<>(outposts.values());
     }
     
     /**
-     * Get a random greeting line
+     * Register a trader outpost from a structure
      * 
-     * @return A random greeting line
+     * @param structure The structure
+     * @return The outpost ID, or null if failed
      */
-    public String getRandomGreeting() {
-        return greetingLines.get(random.nextInt(greetingLines.size()));
+    public UUID registerTraderOutpost(StructureManager.Structure structure) {
+        Location location = structure.getLocation();
+        UUID outpostId = structure.getId();
+        
+        // Create outpost
+        TraderOutpost outpost = new TraderOutpost(outpostId, location);
+        outposts.put(outpostId, outpost);
+        
+        // Spawn trader NPC
+        spawnTraderNPC(outpost);
+        
+        return outpostId;
     }
     
     /**
-     * Get a random farewell line
+     * Get random trade stock
      * 
-     * @return A random farewell line
+     * @param tier The tier
+     * @param category The category
+     * @return The trade stock (item, price)
      */
-    public String getRandomFarewell() {
-        return farewellLines.get(random.nextInt(farewellLines.size()));
+    public Map<org.bukkit.inventory.ItemStack, Integer> getRandomStock(int tier, String category) {
+        // This is a placeholder - actual implementation would generate stock based on config
+        Map<org.bukkit.inventory.ItemStack, Integer> stock = new HashMap<>();
+        
+        // Just add some random items
+        org.bukkit.Material[] materials = {
+            org.bukkit.Material.DIAMOND_SWORD,
+            org.bukkit.Material.IRON_SWORD,
+            org.bukkit.Material.IRON_PICKAXE,
+            org.bukkit.Material.IRON_AXE,
+            org.bukkit.Material.COOKED_BEEF,
+            org.bukkit.Material.GOLDEN_APPLE
+        };
+        
+        for (int i = 0; i < 3 + tier; i++) {
+            int index = ThreadLocalRandom.current().nextInt(materials.length);
+            org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(materials[index]);
+            int price = (tier + 1) * 10 + ThreadLocalRandom.current().nextInt(50);
+            
+            stock.put(item, price);
+        }
+        
+        return stock;
+    }
+    
+    /**
+     * Save traders to database
+     */
+    public void saveTraders() {
+        // TODO: Implement database saving
+        // This is a placeholder - actual implementation would save to database
+    }
+    
+    /**
+     * Represents a trader outpost
+     */
+    public class TraderOutpost {
+        
+        private final UUID id;
+        private final Location location;
+        private UUID npcId;
+        private boolean open;
+        
+        /**
+         * Constructor for TraderOutpost
+         * 
+         * @param id The outpost ID
+         * @param location The location
+         */
+        public TraderOutpost(UUID id, Location location) {
+            this.id = id;
+            this.location = location;
+            this.open = false;
+        }
+        
+        /**
+         * Get the outpost ID
+         * 
+         * @return The ID
+         */
+        public UUID getId() {
+            return id;
+        }
+        
+        /**
+         * Get the structure ID (alias for getId for compatibility)
+         * 
+         * @return The structure ID
+         */
+        public UUID getStructureId() {
+            return id;
+        }
+        
+        /**
+         * Get the location
+         * 
+         * @return The location
+         */
+        public Location getLocation() {
+            return location;
+        }
+        
+        /**
+         * Check if the outpost is open
+         * 
+         * @return True if open
+         */
+        public boolean isOpen() {
+            return open;
+        }
+        
+        /**
+         * Set whether the outpost is open
+         * 
+         * @param open True if open
+         */
+        public void setOpen(boolean open) {
+            this.open = open;
+        }
+        
+        /**
+         * Get the NPC ID
+         * 
+         * @return The NPC ID
+         */
+        public UUID getNpcId() {
+            return npcId;
+        }
+        
+        /**
+         * Set the NPC ID
+         * 
+         * @param npcId The NPC ID
+         */
+        public void setNpcId(UUID npcId) {
+            this.npcId = npcId;
+        }
     }
 }

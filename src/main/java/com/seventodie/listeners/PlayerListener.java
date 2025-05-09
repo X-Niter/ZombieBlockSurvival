@@ -95,7 +95,7 @@ public class PlayerListener implements Listener {
         Structure structure = plugin.getStructureManager().getStructureAt(to);
         if (structure != null) {
             // Check if it's a trader outpost and it's nighttime
-            if (structure.getType() == plugin.getStructureManager().StructureType.TRADER_OUTPOST) {
+            if (structure.getType() == com.seventodie.worldgen.StructureManager.StructureType.TRADER_OUTPOST) {
                 long time = player.getWorld().getTime();
                 boolean isNight = time >= 13000 && time <= 24000;
                 

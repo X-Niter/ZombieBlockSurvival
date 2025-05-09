@@ -1,15 +1,13 @@
 package com.seventodie.quests;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 import org.bukkit.Location;
 
 import com.seventodie.quests.QuestManager.QuestTargetType;
 
+import java.util.UUID;
+
 /**
- * Represents a quest in the game.
+ * Represents a quest in the SevenToDie plugin
  */
 public class Quest {
     
@@ -21,26 +19,21 @@ public class Quest {
     private final Location location;
     private final UUID structureId;
     
+    private int progress;
     private boolean completed;
-    private Object markerRef;
-    private Object secondaryMarkerRef;
-    
-    // Track player progress
-    private final Map<UUID, Integer> playerProgress = new HashMap<>();
     
     /**
-     * Creates a new quest
+     * Constructor for a Quest
      * 
      * @param id The quest ID
      * @param title The quest title
      * @param description The quest description
-     * @param targetType The quest target type
-     * @param targetAmount The target amount to complete
+     * @param targetType The target type
+     * @param targetAmount The target amount
      * @param location The quest location
-     * @param structureId The structure ID this quest is tied to, or null
+     * @param structureId The associated structure ID, or null
      */
-    public Quest(UUID id, String title, String description, QuestTargetType targetType, 
-                int targetAmount, Location location, UUID structureId) {
+    public Quest(UUID id, String title, String description, QuestTargetType targetType, int targetAmount, Location location, UUID structureId) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -48,13 +41,14 @@ public class Quest {
         this.targetAmount = targetAmount;
         this.location = location;
         this.structureId = structureId;
+        this.progress = 0;
         this.completed = false;
     }
     
     /**
      * Get the quest ID
      * 
-     * @return The quest ID
+     * @return The ID
      */
     public UUID getId() {
         return id;
@@ -63,7 +57,7 @@ public class Quest {
     /**
      * Get the quest title
      * 
-     * @return The quest title
+     * @return The title
      */
     public String getTitle() {
         return title;
@@ -72,23 +66,23 @@ public class Quest {
     /**
      * Get the quest description
      * 
-     * @return The quest description
+     * @return The description
      */
     public String getDescription() {
         return description;
     }
     
     /**
-     * Get the quest target type
+     * Get the target type
      * 
-     * @return The quest target type
+     * @return The target type
      */
     public QuestTargetType getTargetType() {
         return targetType;
     }
     
     /**
-     * Get the target amount required to complete the quest
+     * Get the target amount
      * 
      * @return The target amount
      */
@@ -99,25 +93,67 @@ public class Quest {
     /**
      * Get the quest location
      * 
-     * @return The quest location
+     * @return The location
      */
     public Location getLocation() {
         return location;
     }
     
     /**
-     * Get the structure ID this quest is tied to
+     * Get the associated structure ID
      * 
-     * @return The structure ID, or null if not tied to a structure
+     * @return The structure ID, or null
      */
     public UUID getStructureId() {
         return structureId;
     }
     
     /**
-     * Check if the quest has been completed
+     * Get the quest progress
      * 
-     * @return True if the quest is completed
+     * @return The progress
+     */
+    public int getProgress() {
+        return progress;
+    }
+    
+    /**
+     * Get the quest progress for a player
+     * 
+     * @param playerId The player UUID
+     * @return The progress
+     */
+    public int getProgress(UUID playerId) {
+        // For now, we're not tracking per-player progress
+        // so we just return the overall progress
+        return progress;
+    }
+    
+    /**
+     * Check if a player has completed this quest
+     * 
+     * @param playerId The player ID
+     * @return True if completed
+     */
+    public boolean isCompletedByPlayer(UUID playerId) {
+        // For now, we're not tracking per-player completion
+        // so we just return the overall completion status
+        return completed;
+    }
+    
+    /**
+     * Set the quest progress
+     * 
+     * @param progress The new progress
+     */
+    public void setProgress(int progress) {
+        this.progress = Math.max(0, Math.min(progress, targetAmount));
+    }
+    
+    /**
+     * Check if the quest is completed
+     * 
+     * @return True if completed
      */
     public boolean isCompleted() {
         return completed;
@@ -126,102 +162,29 @@ public class Quest {
     /**
      * Set whether the quest is completed
      * 
-     * @param completed True if the quest is completed
+     * @param completed True if completed
      */
     public void setCompleted(boolean completed) {
         this.completed = completed;
     }
     
     /**
-     * Get the marker reference (hologram or armor stand)
+     * Calculate the completion percentage
      * 
-     * @return The marker reference
+     * @return The percentage (0-100)
      */
-    public Object getMarkerRef() {
-        return markerRef;
+    public int getCompletionPercentage() {
+        return (progress * 100) / Math.max(1, targetAmount);
     }
     
-    /**
-     * Set the marker reference
-     * 
-     * @param markerRef The marker reference
-     */
-    public void setMarkerRef(Object markerRef) {
-        this.markerRef = markerRef;
-    }
-    
-    /**
-     * Get the secondary marker reference (for native markers)
-     * 
-     * @return The secondary marker reference
-     */
-    public Object getSecondaryMarkerRef() {
-        return secondaryMarkerRef;
-    }
-    
-    /**
-     * Set the secondary marker reference
-     * 
-     * @param secondaryMarkerRef The secondary marker reference
-     */
-    public void setSecondaryMarkerRef(Object secondaryMarkerRef) {
-        this.secondaryMarkerRef = secondaryMarkerRef;
-    }
-    
-    /**
-     * Get a player's progress on this quest
-     * 
-     * @param playerId The player UUID
-     * @return The player's progress (0 if not started)
-     */
-    public int getProgress(UUID playerId) {
-        return playerProgress.getOrDefault(playerId, 0);
-    }
-    
-    /**
-     * Set a player's progress on this quest
-     * 
-     * @param playerId The player UUID
-     * @param progress The progress value
-     */
-    public void setProgress(UUID playerId, int progress) {
-        playerProgress.put(playerId, progress);
-    }
-    
-    /**
-     * Check if a player has completed this quest
-     * 
-     * @param playerId The player UUID
-     * @return True if the player has completed this quest
-     */
-    public boolean isCompletedByPlayer(UUID playerId) {
-        return getProgress(playerId) >= targetAmount;
-    }
-    
-    /**
-     * Get the progress percentage for a player
-     * 
-     * @param playerId The player UUID
-     * @return The progress percentage (0-100)
-     */
-    public int getProgressPercentage(UUID playerId) {
-        int progress = getProgress(playerId);
-        return (int) ((progress / (double) targetAmount) * 100);
-    }
-    
-    /**
-     * Reset the progress for all players
-     */
-    public void resetProgress() {
-        playerProgress.clear();
-    }
-    
-    /**
-     * Get a string representation of this quest
-     */
     @Override
     public String toString() {
-        return "Quest[id=" + id + ", title=" + title + ", type=" + targetType + 
-               ", target=" + targetAmount + ", completed=" + completed + "]";
+        return "Quest{" +
+                "id=" + id +
+                ", title='" + title + '\'' +
+                ", targetType=" + targetType +
+                ", progress=" + progress + "/" + targetAmount +
+                ", completed=" + completed +
+                '}';
     }
 }
