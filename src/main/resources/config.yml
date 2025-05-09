@@ -1,0 +1,136 @@
+# SevenToDie - 7 Days to Die in Minecraft
+# Main Configuration File
+
+# World Generation Settings
+world-gen:
+  # Road generation settings
+  roads:
+    enabled: true
+    main-road-spacing: 512
+    secondary-road-spacing: 128
+    main-road-width: 5
+    secondary-road-width: 3
+    road-material: BLACK_CONCRETE
+    road-curb-material: GRAY_CONCRETE
+  
+  # Structure generation settings
+  structures:
+    enabled: true
+    trader-spacing: 300
+    # Spawn chances for each structure type (0.0-1.0)
+    residential-chance: 0.5
+    commercial-chance: 0.3
+    industrial-chance: 0.2
+    # Whether to load structures from schematics folder
+    use-schematics: true
+    # Maximum number of structures per chunk
+    max-per-chunk: 1
+  
+  # Biome settings
+  biomes:
+    # Enable biome modifications
+    enabled: true
+    # Biome mappings
+    forest:
+      grass-block: GRASS_BLOCK
+      surface-block: DIRT
+      subsurface-block: STONE
+      foliage: OAK_LEAVES
+      tree: OAK_LOG
+    grassland:
+      grass-block: GRASS_BLOCK
+      surface-block: DIRT
+      subsurface-block: STONE
+      foliage: FERN
+      tree: BIRCH_LOG
+    desert:
+      grass-block: SAND
+      surface-block: SANDSTONE
+      subsurface-block: SMOOTH_SANDSTONE
+      foliage: DEAD_BUSH
+      tree: STRIPPED_ACACIA_LOG
+    snow:
+      grass-block: SNOW_BLOCK
+      surface-block: SNOW
+      subsurface-block: PACKED_ICE
+      foliage: SPRUCE_LEAVES
+      tree: SPRUCE_LOG
+    wasteland:
+      grass-block: COARSE_DIRT
+      surface-block: DIRT
+      subsurface-block: TERRACOTTA
+      foliage: DEAD_BUSH
+      tree: STRIPPED_OAK_LOG
+
+# Trader Settings
+traders:
+  # Whether traders are only accessible during the day
+  day-only-entry: true
+  # Whether traders should play voice lines
+  play-voice-lines: true
+  # Distance to eject players at night
+  ejection-distance: 15
+  # Trader inventory settings
+  inventory:
+    refresh-interval: 86400 # In seconds (24 hours)
+    # Whether traders should have randomized inventories
+    randomize: true
+
+# Quest Settings
+quests:
+  # Whether quests have holographic markers
+  marker-enabled: true
+  # Maximum active quests per player
+  max-active-per-player: 5
+  # Whether to reset structures when quests are completed
+  reset-structures-on-completion: true
+  # Quest types and their chances (0.0-1.0)
+  types:
+    kill-zombies: 0.3
+    collect-items: 0.3
+    clear-building: 0.3
+    dig-resources: 0.1
+
+# Block Settings
+blocks:
+  # Frame block settings
+  frames:
+    enabled: true
+    upgrade-sound: BLOCK_ANVIL_USE
+    # Block materials for each tier
+    tier-materials:
+      0: SCAFFOLDING      # Frame
+      1: OAK_PLANKS       # Wood
+      2: COBBLESTONE      # Cobble
+      3: IRON_BARS        # Rebar
+      4: SMOOTH_STONE     # Concrete
+
+# Tool Settings
+tools:
+  # Hammer tool settings
+  hammers:
+    enabled: true
+    # Maximum tier each hammer can upgrade to
+    stone-max-tier: 1  # Wood
+    iron-max-tier: 3   # Rebar
+    steel-max-tier: 4  # Concrete
+    # Damage applied to tools per use
+    durability-cost: 1
+
+# Performance Settings
+performance:
+  # Whether to load schematics asynchronously
+  async-schematic-loading: true
+  # Maximum block updates per tick (to prevent lag)
+  block-update-throttle: 1000
+  # Whether to use ProtocolLib for optimization if available
+  use-protocol-lib: true
+  # Whether to use Citizens for NPCs if available
+  use-citizens: true
+
+# Debug Settings
+debug:
+  # Whether to log debug messages
+  enabled: false
+  # Log level (INFO, WARNING, SEVERE)
+  level: INFO

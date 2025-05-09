@@ -1,0 +1,40 @@
+modules = ["java"]
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Paper Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "seventodie-plugin-check"
+
+[[workflows.workflow]]
+name = "Paper Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "mkdir -p server && cd server && if [ ! -f paper.jar ]; then wget -O paper.jar https://api.papermc.io/v2/projects/paper/versions/1.21.4/builds/398/downloads/paper-1.21.4-398.jar; fi && echo \"eula=true\" > eula.txt && mkdir -p plugins && cd .. && mvn package && cp target/SevenToDie-1.0.0.jar server/plugins/ && cd server && java -Xms1G -Xmx1G -jar paper.jar nogui"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "seventodie-plugin-check"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "find src -type f | sort"
+
+[deployment]
+run = ["sh", "-c", "mkdir -p server && cd server && if [ ! -f paper.jar ]; then wget -O paper.jar https://api.papermc.io/v2/projects/paper/versions/1.21.4/builds/398/downloads/paper-1.21.4-398.jar; fi && echo \"eula=true\" > eula.txt && mkdir -p plugins && cd .. && mvn package && cp target/SevenToDie-1.0.0.jar server/plugins/ && cd server && java -Xms1G -Xmx1G -jar paper.jar nogui"]

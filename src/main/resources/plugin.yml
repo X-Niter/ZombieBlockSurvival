@@ -1,0 +1,60 @@
+name: SevenToDie
+version: 1.0.0
+main: com.seventodie.SevenToDiePlugin
+api-version: '1.21'
+description: Recreates 7 Days to Die gameplay mechanics in Minecraft
+author: MC7DtD Team
+website: https://github.com/mc7dtd/seventodie
+
+softdepend:
+  - WorldEdit
+  - Citizens
+  - ProtocolLib
+  - HolographicDisplays
+
+commands:
+  seventodie:
+    description: Main command for SevenToDie plugin
+    usage: /seventodie [reload|info|trader|quest|reset]
+    permission: seventodie.admin
+    aliases: [7dtd, 7d2d]
+  
+  trader:
+    description: Commands for trader management
+    usage: /trader [list|spawn|remove] [id]
+    permission: seventodie.trader
+  
+  quest:
+    description: Commands for quest management
+    usage: /quest [list|create|complete|reset] [id]
+    permission: seventodie.quest
+  
+  frame:
+    description: Gives frame blocks and tools
+    usage: /frame [block|tool] [type] [amount]
+    permission: seventodie.frame
+
+permissions:
+  seventodie.admin:
+    description: Allows access to all SevenToDie commands
+    default: op
+    children:
+      seventodie.trader: true
+      seventodie.quest: true
+      seventodie.frame: true
+  
+  seventodie.trader:
+    description: Allows access to trader commands
+    default: op
+  
+  seventodie.quest:
+    description: Allows access to quest commands
+    default: op
+  
+  seventodie.frame:
+    description: Allows access to frame block and tool commands
+    default: op
+  
+  seventodie.player:
+    description: Basic player permissions
+    default: true
