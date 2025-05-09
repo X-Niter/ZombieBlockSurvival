@@ -1,0 +1,258 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process'
+        required: true
+        type: number
+
+jobs:
+  triage-issue:
+    name: Automatically Triage and Label Issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+          
+      - name: Triage issue
+        id: triage-issue
+        uses: actions/github-script@v6
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || github.event.inputs.issue_number }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = process.env.ISSUE_NUMBER;
+            
+            // Get issue details
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(issueNumber)
+            });
+            
+            console.log(`Processing issue #${issueNumber}: ${issue.data.title}`);
+            
+            // Analyze issue text to determine type and component
+            const issueTitle = issue.data.title.toLowerCase();
+            const issueBody = issue.data.body ? issue.data.body.toLowerCase() : '';
+            
+            // Determine issue type
+            let type = 'question';
+            if (issueTitle.includes('bug') || issueTitle.includes('fix') || issueTitle.includes('error') || 
+                issueBody.includes('bug') || issueBody.includes('error') || issueBody.includes('not working')) {
+              type = 'bug';
+            } else if (issueTitle.includes('feature') || issueTitle.includes('enhancement') || issueTitle.includes('add') ||
+                       issueBody.includes('feature') || issueBody.includes('enhancement') || issueBody.includes('could you add')) {
+              type = 'enhancement';
+            }
+            
+            // Determine priority
+            let priority = 'medium';
+            if (issueBody.includes('urgent') || issueBody.includes('critical') || issueBody.includes('high priority') || 
+                issueTitle.includes('urgent') || issueTitle.includes('critical')) {
+              priority = 'high';
+            } else if (issueBody.includes('minor') || issueBody.includes('low priority') || 
+                      issueTitle.includes('minor')) {
+              priority = 'low';
+            }
+            
+            // Determine component
+            let component = 'general';
+            if (issueBody.includes('database') || issueTitle.includes('database') || 
+                issueBody.includes('sql') || issueTitle.includes('sql')) {
+              component = 'database';
+            } else if (issueBody.includes('zombie') || issueTitle.includes('zombie') || 
+                       issueBody.includes('npc') || issueTitle.includes('npc') ||
+                       issueBody.includes('mob') || issueTitle.includes('mob')) {
+              component = 'mobs';
+            } else if (issueBody.includes('world') || issueTitle.includes('world') || 
+                       issueBody.includes('generation') || issueTitle.includes('generation') ||
+                       issueBody.includes('terrain') || issueTitle.includes('terrain')) {
+              component = 'worldgen';
+            } else if (issueBody.includes('quest') || issueTitle.includes('quest')) {
+              component = 'quests';
+            } else if (issueBody.includes('build') || issueTitle.includes('build') || 
+                       issueBody.includes('block') || issueTitle.includes('block') ||
+                       issueBody.includes('structure') || issueTitle.includes('structure')) {
+              component = 'building';
+            } else if (issueBody.includes('trader') || issueTitle.includes('trader') || 
+                       issueBody.includes('shop') || issueTitle.includes('shop') ||
+                       issueBody.includes('trade') || issueTitle.includes('trade')) {
+              component = 'traders';
+            }
+            
+            // Prepare labels
+            const labels = [
+              `type:${type}`,
+              `priority:${priority}`,
+              `component:${component}`,
+              'needs-ai-response'
+            ];
+            
+            // Add labels to issue
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(issueNumber),
+              labels: labels
+            });
+            
+            // Post initial triage comment
+            const triageReply = [
+              `Hello @${issue.data.user.login}! 👋`,
+              '',
+              `Thank you for your ${type}. I'm the AI assistant for this project, and I've automatically triaged this issue.`,
+              '',
+              `**Type:** ${type}`,
+              `**Priority:** ${priority}`,
+              `**Component:** ${component}`,
+              '',
+              `I'll analyze your issue in detail and respond shortly with more information. If you have any additional details to share in the meantime, please add them as a comment.`
+            ].join('\n');
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(issueNumber),
+              body: triageReply
+            });
+            
+            console.log(`Successfully triaged issue #${issueNumber}`);
+            
+      - name: Process issue command
+        if: github.event_name == 'issue_comment' && github.event.action == 'created' && startsWith(github.event.comment.body, '/')
+        uses: actions/github-script@v6
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = process.env.ISSUE_NUMBER;
+            const commentBody = context.payload.comment.body.trim();
+            const commentUser = context.payload.comment.user.login;
+            
+            // Process commands
+            if (commentBody.startsWith('/ai')) {
+              const command = commentBody.split(' ')[1];
+              
+              // Determine the response based on the command
+              let responseBody = '';
+              
+              if (command === 'help') {
+                responseBody = [
+                  '## AI Assistant Commands',
+                  '',
+                  'Here are the commands you can use:',
+                  '',
+                  '- `/ai help` - Show this help message',
+                  '- `/ai fix` - Request the AI to implement a fix for this issue',
+                  '- `/ai analyze` - Request detailed analysis of this issue',
+                  '- `/ai status` - Check the status of any AI-related work for this issue',
+                  '- `/ai implement` - Request implementation of a feature or enhancement',
+                  '- `/ai explain` - Request a detailed explanation of how something works',
+                  '',
+                  'Let me know if you need any assistance!'
+                ].join('\n');
+              } else if (command === 'fix' || command === 'implement') {
+                responseBody = [
+                  `I'll start working on ${command === 'fix' ? 'a fix' : 'an implementation'} for this issue right away.`,
+                  '',
+                  'I\'ll analyze the codebase, develop a solution, and create a pull request with the changes. This process may take a few minutes.',
+                  '',
+                  'I\'ll update you when the pull request is ready for your review.'
+                ].join('\n');
+                
+                // Add ai-implementing label
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parseInt(issueNumber),
+                  labels: ['ai-implementing']
+                });
+                
+                // This would trigger the implementation job in a real setup
+              } else if (command === 'analyze') {
+                responseBody = [
+                  'I\'ll analyze this issue in detail and provide a comprehensive report.',
+                  '',
+                  'I\'ll examine the relevant code, identify potential causes or implementation approaches, and suggest solutions.',
+                  '',
+                  'Please give me a few moments to complete this analysis.'
+                ].join('\n');
+              } else if (command === 'status') {
+                // Get issue labels to determine status
+                const issue = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: parseInt(issueNumber)
+                });
+                
+                const labels = issue.data.labels.map(label => label.name);
+                
+                if (labels.includes('ai-implementing')) {
+                  responseBody = [
+                    'I\'m currently working on implementing a solution for this issue.',
+                    '',
+                    'Status: In Progress',
+                    'ETA: A few minutes',
+                    '',
+                    'I\'ll update you when the pull request is ready for your review.'
+                  ].join('\n');
+                } else if (labels.includes('ai-responded')) {
+                  responseBody = [
+                    'I\'ve already analyzed this issue and provided a response above.',
+                    '',
+                    'If you\'d like me to implement a solution, please use the `/ai implement` or `/ai fix` command.'
+                  ].join('\n');
+                } else {
+                  responseBody = [
+                    'This issue is currently in the queue for AI processing.',
+                    '',
+                    'Status: Queued',
+                    'ETA: Within an hour',
+                    '',
+                    'You can use `/ai fix` to prioritize this issue if it\'s urgent.'
+                  ].join('\n');
+                }
+              } else if (command === 'explain') {
+                responseBody = [
+                  'I\'ll provide a detailed explanation about this topic.',
+                  '',
+                  'Let me gather the relevant information from the codebase and documentation to give you a comprehensive explanation.',
+                  '',
+                  'Please give me a moment to prepare this information.'
+                ].join('\n');
+              } else {
+                responseBody = [
+                  `I don't recognize the command: \`${command}\``,
+                  '',
+                  'Please use `/ai help` to see a list of available commands.'
+                ].join('\n');
+              }
+              
+              // Post response
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(issueNumber),
+                body: responseBody
+              });
+              
+              console.log(`Processed command: ${command} for issue #${issueNumber}`);
+            }

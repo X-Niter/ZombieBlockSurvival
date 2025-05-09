@@ -113,15 +113,17 @@ jobs:
             });
             
             // Post initial triage comment
-            const triageReply = `Hello @${issue.data.user.login}! 👋
-
-Thank you for your ${type}. I'm the AI assistant for this project, and I've automatically triaged this issue.
-
-**Type:** ${type}
-**Priority:** ${priority}
-**Component:** ${component}
-
-I'll analyze your issue in detail and respond shortly with more information. If you have any additional details to share in the meantime, please add them as a comment.`;
+            const triageReply = [
+              `Hello @${issue.data.user.login}! 👋`,
+              '',
+              `Thank you for your ${type}. I'm the AI assistant for this project, and I've automatically triaged this issue.`,
+              '',
+              `**Type:** ${type}`,
+              `**Priority:** ${priority}`,
+              `**Component:** ${component}`,
+              '',
+              `I'll analyze your issue in detail and respond shortly with more information. If you have any additional details to share in the meantime, please add them as a comment.`
+            ].join('\n');
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
