@@ -1,8 +1,27 @@
-# SevenToDie Minecraft Plugin
+# SevenToDie: 7 Days To Die in Minecraft
 
-A comprehensive Minecraft server plugin that recreates 7 Days To Die gameplay mechanics on Paper 1.21.4.
+A comprehensive Minecraft server plugin that recreates 7 Days To Die gameplay mechanics on Paper 1.21.4, featuring a fully autonomous AI-powered development system.
 
 > 🤖 **Fully Autonomous Development**: This project uses an AI-powered autonomous development system that works 24/7 to analyze, fix, and improve code with minimal human intervention. [Learn how it works](.github/AI_DEVELOPMENT.md)
+
+## Repository Structure
+
+This repository is organized as a comprehensive mono-repo that contains:
+
+- **`/plugin`**: The main Minecraft plugin code
+  - Java code for the SevenToDie plugin
+  - Maven build files
+  - Resource files
+  
+- **`/dashboard`**: Web-based monitoring dashboard and control panel
+  - Next.js frontend for viewing project stats
+  - Autonomous development tracking
+  - Issue and PR monitoring
+  
+- **`/.github`**: CI/CD and autonomous development system
+  - GitHub Actions workflows
+  - AI scripts for self-improvement
+  - Autonomous development tools
 
 ## Features
 

@@ -1,0 +1,113 @@
+
+# ZombieBlockSurvival: Unified AI-Driven Mono-Repo Setup
+
+This file contains all the detailed steps needed to restructure and configure your Minecraft Paper plugin project into a **self-sustaining autonomous development fortress** with:
+
+✅ Minecraft Plugin Code
+✅ AI-powered GitHub Actions
+✅ Full Web Dashboard via GitHub Pages
+✅ Centralized management and AI prompt control
+
+---
+
+## 📁 REPO STRUCTURE
+
+Restructure your repository to match the following layout:
+
+```
+ZombieBlockSurvival/
+├── .github/
+│   └── workflows/              # GitHub Actions + AI workflow engines
+├── plugin/                     # Your Minecraft plugin codebase
+│   ├── src/
+│   ├── pom.xml / build.gradle
+├── dashboard/                  # Full Next.js + Tailwind UI (ZBS_Modern_UI)
+│   ├── src/
+│   ├── pages/
+│   ├── public/
+│   └── package.json
+├── README.md
+```
+
+---
+
+## 🧠 PURPOSE OF EACH SECTION
+
+- `plugin/` = Your Paper 1.21.4 plugin source.
+- `dashboard/` = The full web control panel interface.
+- `.github/workflows/` = AI-driven automation scripts.
+
+The dashboard allows:
+- Token management (OAuth2)
+- GitHub status checks
+- Prompt submission to OpenAI
+- Autonomous changelog & fix view
+- Running full AI Dev workflows
+
+---
+
+## 🚀 DASHBOARD INTEGRATION
+
+1. Rename the `ZBS_Modern_UI` folder to `dashboard/`.
+2. Move it into the root of your repo.
+3. Open terminal and test it with:
+
+```bash
+cd dashboard
+npm install
+npm run dev
+```
+
+4. When ready to deploy to GitHub Pages:
+
+```bash
+npm run build
+npm run export
+```
+
+Then push the generated `out/` directory to `gh-pages` branch or configure Pages from `/dashboard/out`.
+
+---
+
+## 🤖 GITHUB ACTIONS + AI DEVOPS
+
+Inside `.github/workflows/`, create AI-enabled workflows that:
+
+- Trigger on issue creation, push, or manually
+- Extract issue context or diffs
+- Send it to OpenAI via GPT
+- Generate patch/diff/fix suggestions
+- Create Pull Requests with changelogs
+- Write logs or summaries into `dashboard/src/data/`
+
+Use the `octokit` npm or PyGitHub for API interaction.
+
+---
+
+## ✅ REQUIRED DEPENDENCIES
+
+For the dashboard (in `dashboard/package.json`):
+
+```json
+"dependencies": {
+  "next": "latest",
+  "react": "latest",
+  "react-dom": "latest",
+  "tailwindcss": "^3.0.0",
+  "typescript": "^5.0.0"
+}
+```
+
+---
+
+## 🧬 GOAL
+
+Create a mono-repo that **autonomously improves** the Paper plugin with the following traits:
+
+- Self-fixing AI PRs
+- Plugin test validation & changelogs
+- Interactive live control panel
+- OAuth2 secure token gateway
+- User-friendly AI prompt submission
+- Deployable as GitHub Pages
+
