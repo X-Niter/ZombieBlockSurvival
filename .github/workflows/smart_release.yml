@@ -1,0 +1,173 @@
+name: 🚀 Smart Auto Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+
+jobs:
+  generate-release:
+    name: 🤖 Auto Analyze & Prepare Release
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: 🧾 Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: 🧠 Setup Python + Git
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: 📦 Install AI + Changelog Tools
+        run: |
+          pip install openai semver requests tqdm
+
+      - name: 📜 Generate Semantic Version
+        id: versioner
+        run: |
+          python .github/scripts/gen_version.py > version.txt
+          echo "version=$(cat version.txt)" >> $GITHUB_OUTPUT
+
+      - name: 🗒️ Generate AI Changelog
+        id: changelog
+        run: |
+          python .github/scripts/gen_changelog.py > changelog.md
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          cat changelog.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 📤 Draft Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.versioner.outputs.version }}
+          name: v${{ steps.versioner.outputs.version }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: true
+      - name: 📁 Save Changelog to CHANGELOGS/
+        run: |
+          mkdir -p CHANGELOGS
+          cp changelog.md CHANGELOGS/v${{ steps.versioner.outputs.version }}.md
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOGS/
+          git commit -m "📦 Archive changelog for v${{ steps.versioner.outputs.version }}"
+          git push
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  require-approval:
+    name: 🛑 Wait for Manual Approval
+    needs: generate-release
+    runs-on: ubuntu-latest
+    if: github.actor == 'X-Niter' || contains(github.event.head_commit.message, '[release]')
+    steps:
+      - run: echo "✅ Release approved by authorized user."
+
+
+  comment-on-pr:
+    name: 💬 PR Changelog Bot
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: 🧾 Checkout
+        uses: actions/checkout@v3
+
+      - name: 🧠 Generate AI Changelog
+        run: |
+          pip install openai
+          python .github/scripts/gen_changelog.py > changelog.md
+
+      - name: 💬 Comment Changelog
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          header: changelog
+          path: changelog.md
+
+
+  label-pr:
+    name: 🏷️ Label PR Automatically
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+    steps:
+      - name: 🧾 Checkout PR
+        uses: actions/checkout@v3
+
+      - name: 🔍 Analyze PR Title
+        id: labeler
+        run: |
+          title="${{ github.event.pull_request.title }}"
+          echo "title=$title"
+          if echo "$title" | grep -i "fix\|bug"; then
+            echo "LABEL=bug" >> $GITHUB_ENV
+          elif echo "$title" | grep -i "refactor"; then
+            echo "LABEL=refactor" >> $GITHUB_ENV
+          elif echo "$title" | grep -i "add\|feature\|enhancement"; then
+            echo "LABEL=enhancement" >> $GITHUB_ENV
+          else
+            echo "LABEL=documentation" >> $GITHUB_ENV
+          fi
+
+      - name: 🏷️ Apply Label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: [ process.env.LABEL ]
+            });
+
+
+  label-feedback:
+    name: 🧠 Label Suggestion Validator
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: 📥 Checkout PR
+        uses: actions/checkout@v3
+
+      - name: 🔍 Extract PR Diff Summary
+        id: diff
+        run: |
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          git fetch origin main
+          git diff origin/main --stat >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 🧠 GPT Label Suggestion
+        uses: openai/openai-action@v1
+        with:
+          model: gpt-4
+          messages: |
+            [
+              {
+                "role": "user",
+                "content": "Given this PR title and diff summary, what GitHub label best matches it?\n\nTitle: ${{ github.event.pull_request.title }}\n\nDiff: ${{ steps.diff.outputs.summary }}\n\nRespond with just the label."
+              }
+            ]
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        id: suggestion
+
+      - name: 💬 Post Label Suggestion
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: label-feedback
+          token: ${{ secrets.GITHUB_TOKEN }}
+          message: |
+            🧠 GPT Suggestion: `${{ steps.suggestion.outputs.choices }}`
+
+            _If this differs from the applied label, consider renaming or adjusting your PR title._
