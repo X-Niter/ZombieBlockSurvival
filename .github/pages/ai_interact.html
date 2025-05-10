@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Dev Agent Console</title>
+  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+</head>
+<body class="bg-gray-900 text-white p-8 font-mono">
+  <h1 class="text-4xl font-bold mb-6">🧠 Autonomous Dev Agent</h1>
+  <div class="mb-4">
+    <label for="aiInput" class="block mb-2 text-sm">Enter Command for AI</label>
+    <textarea id="aiInput" class="w-full p-2 rounded text-black" rows="5" placeholder="Tell the AI to refactor a module, analyze a bug, or plan a new feature..."></textarea>
+    <button id="runAI" class="mt-3 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Run AI Command</button>
+  </div>
+  <div id="aiOutput" class="bg-gray-800 p-4 mt-4 rounded text-green-400 text-sm whitespace-pre-wrap"></div>
+
+  <py-script>
+from js import document
+import openai
+import asyncio
+
+async def run_ai():
+    prompt = document.getElementById("aiInput").value
+    if not prompt:
+        document.getElementById("aiOutput").innerText = "Please enter a prompt."
+        return
+    openai.api_key = Element("OPENAI_API_KEY").value  # Set via environment or injected secret
+    try:
+        response = await openai.ChatCompletion.acreate(
+            model="gpt-4-turbo",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        result = response['choices'][0]['message']['content']
+    except Exception as e:
+        result = f"⚠️ Error: {e}"
+    document.getElementById("aiOutput").innerText = result
+
+Element("runAI").element.onclick = lambda *_: asyncio.ensure_future(run_ai())
+  </py-script>
+</body>
+</html>
