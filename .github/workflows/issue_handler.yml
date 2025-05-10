@@ -1,4 +1,4 @@
-name: AI Assist Issue to PR
+name: Autonomous Issue Handler
 on:
   issues:
     types: [opened]
@@ -10,12 +10,14 @@ permissions:
   issues: write
 
 jobs:
-  analyze-and-suggest:
+  handle-issue:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run AI generator
-        run: python .github/scripts/issue_generator.py "${{ github.event.issue.number }}"
+      - name: Process issue/comment
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python .github/scripts/issue_handler.py

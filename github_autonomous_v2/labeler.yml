@@ -1,0 +1,9 @@
+# Labeler configuration
+frontend:
+  - 'src/frontend/**'
+backend:
+  - 'src/backend/**'
+ci:
+  - '.github/**'
+docs:
+  - 'docs/**'
