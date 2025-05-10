@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "timestamp": "2025-05-10T19:57:23.417726",
+    "test_success": true,
+    "checkstyle_success": true,
+    "spotbugs_success": false,
+    "issues_found": 0,
+    "fixes_generated": 0,
+    "issues": [],
+    "fixes": []
+  }
+]
