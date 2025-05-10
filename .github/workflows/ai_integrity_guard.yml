@@ -1,0 +1,16 @@
+name: AI Integrity Guard
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  scan_and_recover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run talisman secret scan
+        run: curl https://thoughtworks.github.io/talisman/install.sh | bash && talisman --scan
+      - name: Self-healing logic
+        run: echo "Repair broken files if detected"

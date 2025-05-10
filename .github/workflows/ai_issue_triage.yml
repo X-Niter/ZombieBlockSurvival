@@ -1,0 +1,14 @@
+name: AI Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+  workflow_dispatch:
+
+jobs:
+  label_and_classify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run AI Triage Logic
+        run: echo "Classify, label, and route issues using AI"

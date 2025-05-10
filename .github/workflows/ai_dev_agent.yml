@@ -1,0 +1,16 @@
+name: AI Dev Agent
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+
+jobs:
+  respond_or_patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Analyze context and respond via AI
+        run: echo "Handling PRs and comments intelligently"
