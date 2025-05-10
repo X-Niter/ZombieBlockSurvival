@@ -710,7 +710,7 @@ def load_issue_data(args):
         url = f"https://api.github.com/repos/{owner}/{repo}/issues/{args.issue_number}"
         headers = {"Authorization": f"token {args.github_token}"}
         
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers)
         if response.status_code == 200:
             return response.json()
     
@@ -729,13 +729,13 @@ def load_pr_data(args):
         url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{args.pr_number}"
         headers = {"Authorization": f"token {args.github_token}"}
         
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers)
         if response.status_code == 200:
             pr_data = response.json()
             
             # Also fetch PR files
             files_url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{args.pr_number}/files"
-            files_response = requests.get(files_url, headers=headers, timeout=10)
+            files_response = requests.get(files_url, headers=headers)
             if files_response.status_code == 200:
                 pr_data["files"] = files_response.json()
             

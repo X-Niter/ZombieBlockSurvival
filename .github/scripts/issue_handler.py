@@ -37,7 +37,7 @@ def main():
         number = issue.get('number')
     # Deduplicate
         if is_duplicate(repo, title, number):
-    pass
+            pass
     return
     # Generate response
     prompt = f"""You are a senior software engineer. Provide a helpful response or fix suggestion for this issue or comment:\n{text}"""
