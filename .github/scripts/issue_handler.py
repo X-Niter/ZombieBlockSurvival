@@ -9,7 +9,7 @@ def load_event():
     return json.load(open(path))
 
 def is_duplicate(repo, title, current_number=None):
-    """Check for duplicate open issues by title, skipping current."""
+    """Check if another open issue has the same title."""
     for issue in repo.get_issues(state='open'):
         if issue.number == current_number:
             continue
@@ -37,7 +37,6 @@ def main():
         number = issue.get('number')
     # Deduplicate
         if is_duplicate(repo, title, number):
-            pass
     pass
     return
     # Generate response
