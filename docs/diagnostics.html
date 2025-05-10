@@ -1,6 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+  const openaiKey = localStorage.getItem("openaiKey");
+  const githubToken = localStorage.getItem("githubToken");
+  if (!openaiKey || !githubToken) {
+    alert("🔐 Missing API keys. Redirecting to setup...");
+    window.location.href = "setup.html";
+  }
+</script>
+<script>
+  const openaiKey = localStorage.getItem("openaiKey");
+  if (!openaiKey) {
+    alert("🔐 Missing OpenAI API key. Redirecting to setup...");
+    window.location.href = "setup.html";
+  }
+</script>
   <meta charset="UTF-8">
   <title>🧠 AI Diagnostics Dashboard</title>
   <script defer src="https://pyscript.net/latest/pyscript.js"></script>
@@ -18,7 +33,7 @@
 
   <div id="aiOutput" class="bg-gray-800 p-4 mt-4 rounded text-green-400 whitespace-pre-wrap"></div>
 
-  <py-script>
+  <py-script output="aiOutput">
 import openai
 from js import document
 
@@ -37,7 +52,7 @@ Suggest an actionable fix or patch in clear, ready-to-use code.
 Logs:
 {logs}
 """
-    openai.api_key = Element("OPENAI_API_KEY").value
+    openai.api_key = window.localStorage.getItem("openaiKey")
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4-turbo",
@@ -50,6 +65,96 @@ Logs:
 
 document.getElementById("analyzeBtn").addEventListener("click", fix_logs)
   </py-script>
+
+<div id="statusBadge" class="fixed top-4 right-4 z-50 px-3 py-1 rounded bg-green-600 text-white text-xs shadow">
+  ✅ Authenticated
+</div>
+<script>
+  const statusBadge = document.getElementById("statusBadge");
+  const openaiKey = localStorage.getItem("openaiKey");
+  const githubToken = localStorage.getItem("githubToken");
+
+  if (!openaiKey || !githubToken) {
+    alert("🔐 Missing API keys. Redirecting to setup...");
+    window.location.href = "setup.html";
+  }
+</script>
+
+
+<style>
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.7); }
+    50% { box-shadow: 0 0 10px 4px rgba(72, 187, 120, 0.7); }
+  }
+</style>
+<div id="statusBadge" class="fixed top-4 right-4 z-50 px-3 py-1 rounded bg-green-600 text-white text-xs shadow animate-pulse" style="animation: pulseGlow 2s infinite;">
+  ✅ Authenticated
+</div>
+<script>
+  const statusBadge = document.getElementById("statusBadge");
+  const openaiKey = localStorage.getItem("openaiKey");
+  const githubToken = localStorage.getItem("githubToken");
+
+  if (!openaiKey || !githubToken) {
+    alert("🔐 Missing API keys. Redirecting to setup...");
+    window.location.href = "setup.html";
+  }
+</script>
+
+
+<style>
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.7); }
+    50% { box-shadow: 0 0 10px 4px rgba(72, 187, 120, 0.7); }
+  }
+  .badge-error {
+    background-color: #DC2626 !important;
+    animation: none !important;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.7);
+  }
+</style>
+
+<div id="statusBadge" class="fixed top-4 right-4 z-50 px-3 py-1 rounded bg-green-600 text-white text-xs shadow" style="animation: pulseGlow 2s infinite;">
+  ✅ Authenticated
+</div>
+
+<script>
+  const badge = document.getElementById("statusBadge");
+  const openaiKey = localStorage.getItem("openaiKey");
+  const githubToken = localStorage.getItem("githubToken");
+
+  if (!openaiKey || !githubToken) {
+    alert("🔐 Missing API keys. Redirecting to setup...");
+    window.location.href = "setup.html";
+  }
+
+  // Live test ping OpenAI and GitHub once to update badge status
+  async function verifyLiveAuth() {
+    let success = true;
+
+    try {
+      const aiRes = await fetch("https://api.openai.com/v1/models", {
+        headers: { Authorization: `Bearer ${openaiKey}` }
+      });
+      if (!aiRes.ok) success = false;
+    } catch (err) { success = false; }
+
+    try {
+      const ghRes = await fetch("https://api.github.com/user", {
+        headers: { Authorization: `token ${githubToken}` }
+      });
+      if (!ghRes.ok) success = false;
+    } catch (err) { success = false; }
+
+    if (!success) {
+      badge.innerText = "❌ Auth Error";
+      badge.classList.add("badge-error");
+    }
+  }
+
+  verifyLiveAuth();
+</script>
+
 </body>
 </html>
 
