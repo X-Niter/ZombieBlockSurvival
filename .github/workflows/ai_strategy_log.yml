@@ -1,0 +1,22 @@
+name: 📖 AI Strategy Log Updater
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'
+
+jobs:
+  strategy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install OpenAI
+        run: pip install openai
+
+      - name: Append Lesson to Strategy Log
+        run: |
+          python .github/scripts/ai_strategy_logger.py
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

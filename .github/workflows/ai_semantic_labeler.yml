@@ -1,0 +1,23 @@
+name: 🏷️ AI Semantic Labeler
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  labeler:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          pip install openai
+
+      - name: Run Labeler
+        run: |
+          python .github/scripts/ai_semantic_labeler.py
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

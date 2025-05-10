@@ -1,0 +1,25 @@
+name: 🧠 AI Learning Loop
+
+on:
+  pull_request:
+    types: [closed]
+  schedule:
+    - cron: '0 */12 * * *' # Every 12 hours
+
+jobs:
+  learn:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: pip install openai
+
+      - name: Run Learning Agent
+        run: |
+          python .github/scripts/ai_learning_loop.py
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

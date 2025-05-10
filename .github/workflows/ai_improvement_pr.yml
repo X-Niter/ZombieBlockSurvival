@@ -1,0 +1,21 @@
+name: 🔁 AI Auto-Improvement PR Generator
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  improvement:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Generate Suggestions and PR
+        run: |
+          pip install openai
+          python .github/scripts/ai_suggest_and_pr.py
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,24 @@
+name: 💬 AI Issue & PR Conversational Responder
+
+on:
+  issues:
+    types: [opened, edited]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  responder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install OpenAI
+        run: pip install openai
+
+      - name: Run AI Responder
+        run: |
+          python .github/scripts/ai_conversation_responder.py
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
