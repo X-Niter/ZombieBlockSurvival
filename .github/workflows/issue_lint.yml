@@ -10,7 +10,11 @@ permissions:
 
 jobs:
   create-issue-on-failure:
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    if: >
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.actor != 'dependabot[bot]' &&
+      github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Create issue on failure

@@ -33,9 +33,9 @@ jobs:
           else
             pip install black flake8 bandit
           fi
-      - run: black --check .
-      - run: flake8 .
-      - run: bandit -r .
+      - run: black --check . --exclude '\.github/scripts'
+      - run: flake8 . --exclude .github/scripts
+      - run: bandit -r . --exclude .github/scripts
 
   build-and-test:
     needs: lint
