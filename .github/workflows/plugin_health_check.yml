@@ -1,0 +1,274 @@
+name: 🔍 Plugin Health Check
+
+on:
+  schedule:
+    - cron: '0 12 * * *'  # Run daily at 12:00 UTC
+  
+  # Allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install openai requests
+      
+      - name: Build plugin
+        run: |
+          cd plugin
+          mvn package
+      
+      - name: Run plugin health check
+        run: |
+          # Create a minimal server setup
+          mkdir -p test_server
+          cd test_server
+          wget -O paper.jar https://api.papermc.io/v2/projects/paper/versions/1.21.4/builds/228/downloads/paper-1.21.4-228.jar
+          
+          # Create server.properties with minimal settings
+          echo "eula=true" > eula.txt
+          echo "online-mode=false" > server.properties
+          echo "spawn-protection=0" >> server.properties
+          echo "max-players=10" >> server.properties
+          echo "server-ip=127.0.0.1" >> server.properties
+          echo "allow-nether=false" >> server.properties
+          echo "level-type=flat" >> server.properties
+          echo "generate-structures=false" >> server.properties
+          
+          # Create plugins directory and copy our plugin
+          mkdir -p plugins
+          cp ../plugin/target/SevenToDie-1.0.0.jar plugins/
+          
+          # Set up wrapper script to monitor logs
+          cat << EOF > monitor.py
+          #!/usr/bin/env python3
+          import subprocess
+          import time
+          import re
+          import json
+          import os
+          
+          # Start the server process
+          server_process = subprocess.Popen(
+              ["java", "-Xmx1G", "-jar", "paper.jar", "nogui"],
+              stdout=subprocess.PIPE,
+              stderr=subprocess.STDOUT,
+              text=True,
+              bufsize=1
+          )
+          
+          print("Starting server and monitoring logs...")
+          
+          # Initialize monitoring variables
+          issues = []
+          server_started = False
+          plugin_enabled = False
+          serious_errors = 0
+          
+          # Monitor for a maximum of 3 minutes
+          start_time = time.time()
+          timeout = 180  # 3 minutes
+          
+          try:
+              # Read output line by line
+              for line in server_process.stdout:
+                  # Print the log for debugging
+                  print(line.strip())
+                  
+                  # Check for server start completion
+                  if "Done" in line and "For help" in line:
+                      server_started = True
+                      print("Server startup completed")
+                  
+                  # Check for plugin enabling
+                  if "[SevenToDie] Loading server plugin SevenToDie" in line:
+                      plugin_enabled = True
+                      print("Plugin is loading")
+                  
+                  # Check for plugin errors
+                  if "SevenToDie" in line and any(error in line for error in ["ERROR", "Exception", "Error", "Failed"]):
+                      issues.append({
+                          "type": "error",
+                          "message": line.strip()
+                      })
+                      serious_errors += 1
+                  
+                  # Check for plugin warnings
+                  if "SevenToDie" in line and "WARN" in line:
+                      issues.append({
+                          "type": "warning",
+                          "message": line.strip()
+                      })
+                  
+                  # Check timeout
+                  if time.time() - start_time > timeout:
+                      print("Timeout reached, stopping monitoring")
+                      break
+                  
+                  # If we have serious errors, break early
+                  if serious_errors >= 3:
+                      print("Multiple serious errors detected, stopping monitoring")
+                      break
+          finally:
+              # Save results
+              results = {
+                  "server_started": server_started,
+                  "plugin_enabled": plugin_enabled,
+                  "issues": issues,
+                  "serious_errors": serious_errors
+              }
+              
+              with open("health_check_results.json", "w") as f:
+                  json.dump(results, f, indent=2)
+              
+              # Clean shutdown
+              if server_process.poll() is None:
+                  print("Shutting down server...")
+                  server_process.terminate()
+                  server_process.wait(timeout=10)
+          EOF
+          
+          # Make the script executable
+          chmod +x monitor.py
+          
+          # Run the monitoring script
+          python monitor.py
+          
+          # Check results
+          if [ -f health_check_results.json ]; then
+            cat health_check_results.json
+            SERIOUS_ERRORS=$(grep -o '"serious_errors": [0-9]*' health_check_results.json | grep -o '[0-9]*')
+            if [ "$SERIOUS_ERRORS" -gt 0 ]; then
+              echo "Health check failed with $SERIOUS_ERRORS serious errors!"
+              exit 1
+            else
+              echo "Health check completed successfully!"
+            fi
+          else
+            echo "Health check failed: No results file generated!"
+            exit 1
+          fi
+      
+      - name: Create issue for health check failures
+        if: failure()
+        run: |
+          cd test_server
+          
+          # Check if we have results
+          if [ -f health_check_results.json ]; then
+            # Format issues for GitHub issue
+            ISSUES=$(python -c "
+          import json
+          
+          with open('health_check_results.json', 'r') as f:
+              data = json.load(f)
+          
+          issues_md = '## Plugin Health Check Issues\n\n'
+          
+          if data['issues']:
+              for issue in data['issues']:
+                  issues_md += f'- **{issue[\"type\"].upper()}**: {issue[\"message\"]}\n'
+          else:
+              issues_md += 'No specific issues found in logs, but health check failed.\n'
+          
+          print(issues_md)
+          ")
+            
+            # Use GitHub API to create issue
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              https://api.github.com/repos/${{ github.repository }}/issues \
+              -d "{
+                \"title\": \"[Auto] Plugin Health Check Failed\",
+                \"body\": \"The automated plugin health check detected issues with the plugin.\n\n$ISSUES\n\nPlease apply the 'ai-fix' label if you'd like the autonomous system to attempt a fix.\",
+                \"labels\": [\"bug\", \"automated\"]
+              }"
+            
+            echo "Created GitHub issue for health check failure"
+          else
+            echo "No health check results available"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Log health check results to dashboard
+        run: |
+          # Create dashboard data directory if it doesn't exist
+          mkdir -p dashboard/src/data
+          
+          # Read health check results
+          if [ -f test_server/health_check_results.json ]; then
+            # Convert to dashboard format and append to health check log
+            python -c "
+          import json
+          import datetime
+          import os
+          
+          # Read health check results
+          with open('test_server/health_check_results.json', 'r') as f:
+              hc_data = json.load(f)
+          
+          # Create log entry
+          log_entry = {
+              'timestamp': datetime.datetime.now().isoformat(),
+              'server_started': hc_data.get('server_started', False),
+              'plugin_enabled': hc_data.get('plugin_enabled', False),
+              'issues_count': len(hc_data.get('issues', [])),
+              'serious_errors': hc_data.get('serious_errors', 0),
+              'success': hc_data.get('serious_errors', 0) == 0,
+              'issues': hc_data.get('issues', [])
+          }
+          
+          # Read existing log if it exists
+          log_file = 'dashboard/src/data/health_check_logs.json'
+          try:
+              with open(log_file, 'r') as f:
+                  log_data = json.load(f)
+          except (FileNotFoundError, json.JSONDecodeError):
+              log_data = []
+          
+          # Add new entry and write back
+          log_data.append(log_entry)
+          
+          # Keep only the last 30 entries to avoid file bloat
+          if len(log_data) > 30:
+              log_data = log_data[-30:]
+          
+          with open(log_file, 'w') as f:
+              json.dump(log_data, f, indent=2)
+          
+          print(f'Added health check log entry to {log_file}')
+          "
+          
+            echo "Health check results logged to dashboard"
+          else
+            echo "No health check results available"
+          fi
+      
+      - name: Commit dashboard data
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add dashboard/src/data/*.json
+          git commit -m "Update dashboard data from health check [skip ci]" || echo "No changes to commit"
+          git push

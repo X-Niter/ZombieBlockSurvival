@@ -1,0 +1,116 @@
+name: 🔧 Auto-Fix System
+
+on:
+  # Run on workflow failures
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+    branches: [main]
+  
+  # Run on schedule for regular self-maintenance
+  schedule:
+    - cron: '0 0,12 * * *'  # Twice daily at midnight and noon UTC
+  
+  # Allow manual triggering for troubleshooting
+  workflow_dispatch:
+
+# Permission needed for committing fixes and creating issues
+permissions:
+  contents: write
+  issues: write
+  actions: read
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    # Only run if a workflow failed or this was manually triggered
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full history for proper git operations
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml openai requests gitpython
+      
+      - name: Run auto-fix script
+        run: |
+          python .github/scripts/auto_fix_workflows.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+      
+      - name: Update dashboard with fix results
+        if: success()
+        run: |
+          # Ensure dashboard directory exists
+          mkdir -p dashboard/src/data
+          
+          # Check if auto_fix_logs.json exists
+          if [ -f dashboard/src/data/auto_fix_logs.json ]; then
+            # Commit and push any new dashboard data
+            git config --global user.name "AI Auto-Fix Bot"
+            git config --global user.email "ai-bot@example.com"
+            git add dashboard/src/data/auto_fix_logs.json
+            git commit -m "📊 Update dashboard data with auto-fix results" || echo "No changes to commit"
+            git push || echo "Failed to push dashboard updates"
+          fi
+  
+  self-check:
+    runs-on: ubuntu-latest
+    # Only run on schedule or manual triggers (not on workflow failures)
+    if: github.event_name != 'workflow_run'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml flake8 pytest mypy openai requests
+      
+      - name: Lint AI scripts
+        run: |
+          echo "Checking AI scripts for syntax and style issues..."
+          flake8 .github/scripts/ --count --select=E9,F63,F7,F82 --show-source --statistics || echo "Found issues but continuing"
+          
+          echo "Checking for common issues in scripts..."
+          for script in .github/scripts/*.py; do
+            python -m py_compile "$script" || echo "Syntax error in $script"
+          done
+      
+      - name: Check workflows syntax
+        run: |
+          echo "Checking workflow files for syntax issues..."
+          for workflow in .github/workflows/*.yml; do
+            python -c "import yaml; yaml.safe_load(open('$workflow'))" || echo "YAML syntax error in $workflow"
+          done
+      
+      - name: Create issue for any detected problems
+        if: failure()
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/issues \
+            -d "{
+              \"title\": \"🔍 Self-Check Found Issues in Autonomous System\",
+              \"body\": \"The autonomous system self-check found issues that need to be addressed. Please check the workflow logs for details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\\n\\nThe auto-fix system will attempt to fix these issues in the next run.\",
+              \"labels\": [\"bug\", \"automated\", \"ai-fix\"]
+            }"

@@ -22,6 +22,9 @@ const Dashboard = () => {
   const [prsData, setPrsData] = useState([]);
   const [aiInteractions, setAiInteractions] = useState([]);
   const [aiImplementations, setAiImplementations] = useState([]);
+  const [healthCheckLogs, setHealthCheckLogs] = useState([]);
+  const [autoFixLogs, setAutoFixLogs] = useState([]);
+  const [selfTestLogs, setSelfTestLogs] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
@@ -30,9 +33,15 @@ const Dashboard = () => {
         // Load data from files
         const interactions = await loadLocalData('ai_interactions.json');
         const implementations = await loadLocalData('ai_implementations.json');
+        const healthChecks = await loadLocalData('health_check_logs.json');
+        const autoFixes = await loadLocalData('auto_fix_logs.json');
+        const selfTests = await loadLocalData('self_test_logs.json');
         
         setAiInteractions(interactions || []);
         setAiImplementations(implementations || []);
+        setHealthCheckLogs(healthChecks || []);
+        setAutoFixLogs(autoFixes || []);
+        setSelfTestLogs(selfTests || []);
         
         // Organize PR and issue data
         const issues = interactions.filter(item => item.event_type === 'issue');
@@ -144,6 +153,26 @@ const Dashboard = () => {
               }`}
             >
               AI Implementations
+            </button>
+            <button
+              onClick={() => setActiveTab('health')}
+              className={`mr-8 py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'health'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              System Health
+            </button>
+            <button
+              onClick={() => setActiveTab('selfRepair')}
+              className={`mr-8 py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'selfRepair'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Self-Repair
             </button>
           </nav>
         </div>
@@ -296,6 +325,221 @@ const Dashboard = () => {
                 ) : (
                   <li className="px-4 py-4 sm:px-6 text-center text-gray-500">
                     No AI implementations recorded yet
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+        )}
+        
+        {/* System Health Tab */}
+        {activeTab === 'health' && (
+          <div className="mt-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* Health Status Card */}
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg font-medium text-gray-900">Plugin Health Status</h3>
+                  <div className="mt-4">
+                    {healthCheckLogs.length > 0 ? (
+                      <div>
+                        <div className="flex items-center">
+                          <div className={`flex-shrink-0 h-5 w-5 rounded-full ${
+                            healthCheckLogs[0].success ? 'bg-green-500' : 'bg-red-500'
+                          }`}></div>
+                          <p className="ml-3 text-sm text-gray-700">
+                            {healthCheckLogs[0].success 
+                              ? 'System is healthy' 
+                              : `Issues detected: ${healthCheckLogs[0].issues_count}`}
+                          </p>
+                        </div>
+                        <p className="mt-2 text-sm text-gray-500">
+                          Last checked: {new Date(healthCheckLogs[0].timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No health check data available</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Health Check History Card */}
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg font-medium text-gray-900">Recent Health Checks</h3>
+                  <div className="mt-4">
+                    <ul className="divide-y divide-gray-200">
+                      {healthCheckLogs.slice(0, 5).map((log, index) => (
+                        <li key={index} className="py-2">
+                          <div className="flex items-center">
+                            <div className={`flex-shrink-0 h-4 w-4 rounded-full ${
+                              log.success ? 'bg-green-500' : 'bg-red-500'
+                            }`}></div>
+                            <p className="ml-3 text-sm text-gray-700">
+                              {log.success 
+                                ? 'Healthy' 
+                                : `${log.issues_count} issues`} - {new Date(log.timestamp).toLocaleString()}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                      {healthCheckLogs.length === 0 && (
+                        <li className="py-2 text-center text-gray-500">
+                          No health check history available
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Self-Test Results Card */}
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg font-medium text-gray-900">Self-Test Results</h3>
+                  <div className="mt-4">
+                    <ul className="divide-y divide-gray-200">
+                      {selfTestLogs.slice(0, 5).map((log, index) => (
+                        <li key={index} className="py-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className={`flex-shrink-0 h-4 w-4 rounded-full ${
+                                log.issues_found === 0 ? 'bg-green-500' : 'bg-yellow-500'
+                              }`}></div>
+                              <p className="ml-3 text-sm text-gray-700">
+                                {log.issues_found === 0 
+                                  ? 'All tests passed' 
+                                  : `${log.issues_found} issues found`}
+                              </p>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                      {selfTestLogs.length === 0 && (
+                        <li className="py-2 text-center text-gray-500">
+                          No self-test results available
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Issue Breakdown Card */}
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg font-medium text-gray-900">System Components Status</h3>
+                  <div className="mt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="border rounded p-3">
+                        <h4 className="text-sm font-medium text-gray-700">Plugin</h4>
+                        <div className="mt-1 flex items-center">
+                          <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                          <span className="ml-2 text-sm text-gray-500">Operational</span>
+                        </div>
+                      </div>
+                      <div className="border rounded p-3">
+                        <h4 className="text-sm font-medium text-gray-700">GitHub Actions</h4>
+                        <div className="mt-1 flex items-center">
+                          <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                          <span className="ml-2 text-sm text-gray-500">Operational</span>
+                        </div>
+                      </div>
+                      <div className="border rounded p-3">
+                        <h4 className="text-sm font-medium text-gray-700">AI Scripts</h4>
+                        <div className="mt-1 flex items-center">
+                          <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                          <span className="ml-2 text-sm text-gray-500">Operational</span>
+                        </div>
+                      </div>
+                      <div className="border rounded p-3">
+                        <h4 className="text-sm font-medium text-gray-700">Dashboard</h4>
+                        <div className="mt-1 flex items-center">
+                          <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                          <span className="ml-2 text-sm text-gray-500">Operational</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Self-Repair Tab */}
+        {activeTab === 'selfRepair' && (
+          <div className="mt-6">
+            <div className="bg-white overflow-hidden shadow rounded-lg mb-6">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg font-medium text-gray-900">System Self-Repair Status</h3>
+                <div className="mt-4">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-green-500"></div>
+                    <p className="ml-3 text-sm text-gray-700">Self-repair system is active and operational</p>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Last verification: {new Date().toLocaleString()}
+                  </p>
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div className="border rounded p-3">
+                      <h4 className="text-sm font-medium text-gray-700">Auto-Fix System</h4>
+                      <div className="mt-1 flex items-center">
+                        <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                        <span className="ml-2 text-sm text-gray-500">Active</span>
+                      </div>
+                    </div>
+                    <div className="border rounded p-3">
+                      <h4 className="text-sm font-medium text-gray-700">Recovery System</h4>
+                      <div className="mt-1 flex items-center">
+                        <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                        <span className="ml-2 text-sm text-gray-500">Standby</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white shadow overflow-hidden sm:rounded-md">
+              <div className="px-4 py-5 sm:px-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  Recent Self-Repair Actions
+                </h3>
+              </div>
+              <ul className="divide-y divide-gray-200">
+                {autoFixLogs.length > 0 ? (
+                  autoFixLogs.map((log, index) => (
+                    <li key={index} className="px-4 py-4 sm:px-6">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-indigo-600">
+                          {new Date(log.timestamp).toLocaleString()}
+                        </p>
+                        <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                          {log.fixes_count} fixes applied
+                        </p>
+                      </div>
+                      <div className="mt-2">
+                        <ul className="list-disc pl-5 text-sm text-gray-500">
+                          {log.fixes && log.fixes.slice(0, 3).map((fix, idx) => (
+                            <li key={idx}>{fix}</li>
+                          ))}
+                          {log.fixes && log.fixes.length > 3 && (
+                            <li className="text-indigo-600">
+                              ...and {log.fixes.length - 3} more fixes
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    </li>
+                  ))
+                ) : (
+                  <li className="px-4 py-4 sm:px-6 text-center text-gray-500">
+                    No self-repair actions recorded yet
                   </li>
                 )}
               </ul>

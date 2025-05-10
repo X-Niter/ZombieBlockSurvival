@@ -1,0 +1,182 @@
+name: 🚑 System Recovery Process
+
+# This workflow is the "last resort" to recover from catastrophic failures
+# It only runs when manually triggered or when auto-fix workflow itself fails
+
+on:
+  # Run on workflow failures of auto-fix system
+  workflow_run:
+    workflows: ["🔧 Auto-Fix System"]
+    types: [completed]
+    branches: [main]
+  
+  # Run on schedule (less frequently than auto-fix) as a last resort check
+  schedule:
+    - cron: '0 4 * * 0'  # Weekly on Sunday at 4am UTC
+  
+  # Allow manual triggering for emergency recovery
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: 'Force full recovery process even if no issues detected'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['true', 'false']
+
+# Permission needed for committing fixes and creating issues
+permissions:
+  contents: write
+  issues: write
+  actions: read
+
+jobs:
+  system-recovery:
+    runs-on: ubuntu-latest
+    # Only run if auto-fix workflow failed or this was manually triggered
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full history for proper git operations
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml openai requests gitpython
+      
+      - name: Prepare for recovery
+        run: |
+          # Create directories if they don't exist
+          mkdir -p .github/scripts .github/workflows dashboard/src/data
+          
+          # If system_recovery.py is missing or corrupted, create a minimal version
+          if [ ! -f .github/scripts/system_recovery.py ]; then
+            echo "#!/usr/bin/env python3
+import os
+import sys
+import requests
+import openai
+
+def main():
+    # Minimal recovery script that can restore the full system_recovery.py
+    try:
+        openai.api_key = os.getenv('OPENAI_API_KEY')
+        if not openai.api_key:
+            sys.exit(1)
+        
+        prompt = \"\"\"Create a comprehensive system_recovery.py script for a GitHub repo with autonomous development.
+        
+        The script should:
+        1. Check for missing critical files (.github/scripts/* and .github/workflows/*)
+        2. Generate any missing files using OpenAI API
+        3. Fix directory structure
+        4. Ensure dashboard data files exist
+        5. Commit and push restored files
+        6. Create a recovery report
+        
+        Use proper error handling and logging.\"\"\"
+        
+        response = openai.ChatCompletion.create(
+            model=\"gpt-4-turbo\",
+            messages=[{\"role\": \"user\", \"content\": prompt}],
+            temperature=0.2,
+            max_tokens=4000
+        )
+        
+        content = response['choices'][0]['message']['content'].strip()
+        
+        # Remove markdown formatting if present
+        if content.startswith('```python'):
+            content = content[9:]
+        if content.endswith('```'):
+            content = content[:-3]
+        
+        with open('.github/scripts/system_recovery.py', 'w') as f:
+            f.write(content.strip())
+        
+        print('Created minimal system_recovery.py')
+    except Exception as e:
+        print(f'Error in minimal recovery: {e}')
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()" > .github/scripts/system_recovery.py
+            chmod +x .github/scripts/system_recovery.py
+            echo "Created minimal recovery script"
+          fi
+      
+      - name: Run system recovery
+        run: |
+          python .github/scripts/system_recovery.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          FORCE_RUN: ${{ github.event.inputs.force_run || 'false' }}
+      
+      - name: Verify critical components
+        run: |
+          echo "Verifying critical scripts..."
+          for script in ai_conversation_responder.py ai_implementation.py ai_triage_issue.py self_test_and_fix.py auto_fix_workflows.py; do
+            if [ ! -f .github/scripts/$script ]; then
+              echo "::error::Critical script missing: $script"
+              exit 1
+            fi
+          done
+          
+          echo "Verifying critical workflows..."
+          for workflow in ai_improvement_pr.yml issue_triage.yml pr_comment_response.yml self_test_and_fix.yml auto_fix_system.yml; do
+            if [ ! -f .github/workflows/$workflow ]; then
+              echo "::error::Critical workflow missing: $workflow"
+              exit 1
+            fi
+          done
+          
+          echo "Verifying dashboard data directory..."
+          if [ ! -d dashboard/src/data ]; then
+            echo "::error::Dashboard data directory missing"
+            exit 1
+          fi
+          
+          echo "All critical components verified"
+      
+      - name: Final notification
+        if: always()
+        run: |
+          if [ ${{ job.status }} == "success" ]; then
+            echo "System recovery completed successfully"
+            
+            # Create a comment on latest issue if this was manually triggered
+            if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              curl -X POST \
+                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                https://api.github.com/repos/${{ github.repository }}/issues \
+                -d "{
+                  \"title\": \"✅ System Recovery Completed Successfully\",
+                  \"body\": \"The system recovery process was manually triggered and completed successfully. All critical components have been verified.\\n\\nTrigger: Manual\\nRun: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
+                  \"labels\": [\"automated\", \"system-recovery\"]
+                }"
+            fi
+          else
+            echo "System recovery failed, manual intervention required"
+            
+            # Create a high priority issue
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              https://api.github.com/repos/${{ github.repository }}/issues \
+              -d "{
+                \"title\": \"🚨 URGENT: System Recovery Failed\",
+                \"body\": \"The system recovery process has failed. Manual intervention is required to restore the autonomous system.\\n\\nPlease check the workflow logs for details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\\n\\nThis is a high priority issue that affects the entire autonomous development system.\",
+                \"labels\": [\"bug\", \"high-priority\"]
+              }"
+          fi
