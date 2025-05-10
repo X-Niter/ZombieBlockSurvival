@@ -1,13 +1,9 @@
-name: 📊 Deploy AI Dashboard
+
+name: Deploy Dashboard
 
 on:
-  # Deploy when data is updated
   push:
-    branches: [ main ]
-    paths:
-      - 'dashboard/src/data/**'
-  
-  # Allow manual deploy
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -15,45 +11,41 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      
-      - name: Setup Node.js
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: dashboard/package.json
-      
-      - name: Install dependencies
+          node-version: 18
+
+      - name: Install and Build Dashboard
+        working-directory: dashboard
         run: |
-          cd dashboard
           npm install
-      
-      - name: Build dashboard
-        run: |
-          cd dashboard
           npm run build
           npm run export
-      
-      - name: Upload Pages artifact
+
+      - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v1
         with:
           path: dashboard/out
-  
+
   deploy:
     needs: build
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v2
