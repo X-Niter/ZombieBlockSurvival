@@ -158,6 +158,8 @@ public class RoadGenerator {
      * @param isMainRoad True if this is a main road
      * @param roadHeight The Y level for the road
      */
+    private static final int BATCH_SIZE = 64;
+    
     private void generateRoadSegment(World world, int blockX, int blockZ, boolean isXAxis, boolean isMainRoad, int roadHeight) {
         int roadWidth = isMainRoad ? ROAD_WIDTH_MAIN : ROAD_WIDTH_SECONDARY;
 

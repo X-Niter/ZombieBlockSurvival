@@ -83,9 +83,19 @@ public class TraderManager {
         }, 20 * 60, 20 * 60);
     }
 
+    private static final int UPDATE_RADIUS = 128;
+    private static final int BATCH_SIZE = 16;
+    
     private void updateOutposts() {
-        // Group outposts by world for batch processing
-        Map<World, List<TraderOutpost>> outpostsByWorld = new HashMap<>();
+        // Use spatial indexing for efficient updates
+        for (Map.Entry<World, List<TraderOutpost>> entry : outpostsByWorld.entrySet()) {
+            World world = entry.getKey();
+            List<TraderOutpost> outposts = entry.getValue();
+            
+            // Process in batches
+            for (int i = 0; i < outposts.size(); i += BATCH_SIZE) {
+                int end = Math.min(i + BATCH_SIZE, outposts.size());
+                List<TraderOutpost> batch = outposts.subList(i, end);
         for (TraderOutpost outpost : outposts.values()) {
             outpostsByWorld.computeIfAbsent(outpost.getLocation().getWorld(), w -> new ArrayList<>()).add(outpost);
         }

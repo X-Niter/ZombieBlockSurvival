@@ -34,11 +34,12 @@ public class DatabaseManager {
     private final SevenToDiePlugin plugin;
     private HikariDataSource connectionPool;
 
-    private static final int MIN_POOL_SIZE = 3;
-    private static final int MAX_POOL_SIZE = 10;
-    private static final int CONNECTION_TIMEOUT = 5000;
-    private static final int IDLE_TIMEOUT = 300000; // 5 minutes
-    private static final int MAX_LIFETIME = 1200000; // 20 minutes
+    private static final int MIN_POOL_SIZE = 2;
+    private static final int MAX_POOL_SIZE = 5;
+    private static final int CONNECTION_TIMEOUT = 3000;
+    private static final int IDLE_TIMEOUT = 120000; // 2 minutes
+    private static final int MAX_LIFETIME = 300000; // 5 minutes
+    private static final int LEAK_DETECTION_THRESHOLD = 30000; // 30 seconds
 
     private boolean inMemoryMode = false;
     private File databaseFile;
