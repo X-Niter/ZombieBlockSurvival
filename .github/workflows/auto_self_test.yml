@@ -30,9 +30,11 @@ jobs:
         run: |
           python .github/scripts/self_test_and_fix.py
 
-      - name: Upload Diagnostics Log
+      - name: Upload Diagnostics Log (safe fallback enabled)
         if: always()
         uses: actions/upload-artifact@v2
+        continue-on-error: true
+        if: always()
         with:
           name: ai-diagnostics-log
           path: ai_diagnostics.log
