@@ -19,19 +19,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import org.bukkit.Chunk;
 
 /**
  * Manages trader NPCs and outposts
  */
 public class TraderManager {
-    
+
     private final SevenToDiePlugin plugin;
     private final Map<UUID, TraderNPC> traders = new HashMap<>();
     private final Map<UUID, TraderOutpost> outposts = new HashMap<>();
     private final boolean useCitizens;
-    
+
     private BukkitTask outpostTask;
-    
+    private final Map<World, List<TraderOutpost>> outpostsByWorld = new HashMap<>();
+    private final Map<ChunkCoordinate, List<TraderOutpost>> outpostsByChunk = new HashMap<>();
+
     /**
      * Constructor for TraderManager
      * 
@@ -40,14 +43,28 @@ public class TraderManager {
     public TraderManager(SevenToDiePlugin plugin) {
         this.plugin = plugin;
         this.useCitizens = plugin.getServer().getPluginManager().getPlugin("Citizens") != null;
-        
+
         // Load traders from database
         loadTraders();
-        
+
         // Start outpost update task
         startOutpostTask();
+
+        // Initialize spatial partitioning
+        initializeOutpostMaps();
     }
-    
+
+    private void initializeOutpostMaps() {
+        for (TraderOutpost outpost : outposts.values()) {
+            World world = outpost.getLocation().getWorld();
+            if (world != null) {
+                outpostsByWorld.computeIfAbsent(world, k -> new ArrayList<>()).add(outpost);
+            }
+            ChunkCoordinate chunkCoord = new ChunkCoordinate(outpost.getLocation().getChunk());
+            outpostsByChunk.computeIfAbsent(chunkCoord, k -> new ArrayList<>()).add(outpost);
+        }
+    }
+
     /**
      * Load traders from database
      */
@@ -55,7 +72,7 @@ public class TraderManager {
         // TODO: Implement database loading
         // This is a placeholder - actual implementation would load from database
     }
-    
+
     /**
      * Start the outpost update task
      */
@@ -65,35 +82,27 @@ public class TraderManager {
             updateOutposts();
         }, 20 * 60, 20 * 60);
     }
-    
-    /**
-     * Update all outposts (open/close based on time)
-     */
+
     private void updateOutposts() {
-        // Group outposts by world for batch processing
-        Map<World, List<TraderOutpost>> outpostsByWorld = new HashMap<>();
-        for (TraderOutpost outpost : outposts.values()) {
-            outpostsByWorld.computeIfAbsent(outpost.getLocation().getWorld(), w -> new ArrayList<>()).add(outpost);
-        }
-        
-        // Process each world's outposts together
+        // Update outposts by world for better performance
         for (Map.Entry<World, List<TraderOutpost>> entry : outpostsByWorld.entrySet()) {
             World world = entry.getKey();
             long worldTime = world.getTime();
             boolean shouldBeOpen = worldTime >= 0 && worldTime < 12000;
-            
-            for (TraderOutpost outpost : entry.getValue()) {
-            
-            if (shouldBeOpen && !outpost.isOpen()) {
-                // Open the outpost
-                openOutpost(outpost);
-            } else if (!shouldBeOpen && outpost.isOpen()) {
-                // Close the outpost
-                closeOutpost(outpost);
-            }
+
+            // Update all outposts in this world at once
+            entry.getValue().forEach(outpost -> {
+                if (shouldBeOpen != outpost.isOpen()) {
+                    if (shouldBeOpen) {
+                        openOutpost(outpost);
+                    } else {
+                        closeOutpost(outpost);
+                    }
+                }
+            });
         }
     }
-    
+
     /**
      * Open an outpost
      * 
@@ -101,7 +110,7 @@ public class TraderManager {
      */
     private void openOutpost(TraderOutpost outpost) {
         outpost.setOpen(true);
-        
+
         // Notify nearby players
         List<Player> nearbyPlayers = getNearbyPlayers(outpost.getLocation(), 50);
         for (Player player : nearbyPlayers) {
@@ -110,7 +119,7 @@ public class TraderManager {
                     ChatColor.GREEN + " is now open for business!");
         }
     }
-    
+
     /**
      * Close an outpost
      * 
@@ -118,7 +127,7 @@ public class TraderManager {
      */
     private void closeOutpost(TraderOutpost outpost) {
         outpost.setOpen(false);
-        
+
         // Notify nearby players
         List<Player> nearbyPlayers = getNearbyPlayers(outpost.getLocation(), 50);
         for (Player player : nearbyPlayers) {
@@ -126,13 +135,13 @@ public class TraderManager {
                     ChatColor.YELLOW + formatLocation(outpost.getLocation()) + 
                     ChatColor.RED + " is now closed. Come back during the day!");
         }
-        
+
         // Close any open menus for this trader
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             // TODO: Implement menu closing
         }
     }
-    
+
     /**
      * Get players near a location
      * 
@@ -143,16 +152,16 @@ public class TraderManager {
     private List<Player> getNearbyPlayers(Location location, double radius) {
         List<Player> nearbyPlayers = new ArrayList<>();
         double radiusSquared = radius * radius;
-        
+
         for (Player player : location.getWorld().getPlayers()) {
             if (player.getLocation().distanceSquared(location) <= radiusSquared) {
                 nearbyPlayers.add(player);
             }
         }
-        
+
         return nearbyPlayers;
     }
-    
+
     /**
      * Format a location for display
      * 
@@ -162,7 +171,7 @@ public class TraderManager {
     private String formatLocation(Location location) {
         return location.getBlockX() + ", " + location.getBlockY() + ", " + location.getBlockZ();
     }
-    
+
     /**
      * Create a new trader outpost
      * 
@@ -173,21 +182,29 @@ public class TraderManager {
         try {
             // Generate unique ID
             UUID outpostId = UUID.randomUUID();
-            
+
             // Create outpost
             TraderOutpost outpost = new TraderOutpost(outpostId, location);
             outposts.put(outpostId, outpost);
-            
+
+            // Add to spatial partitioning maps
+            World world = location.getWorld();
+            if (world != null) {
+                outpostsByWorld.computeIfAbsent(world, k -> new ArrayList<>()).add(outpost);
+            }
+            ChunkCoordinate chunkCoord = new ChunkCoordinate(location.getChunk());
+            outpostsByChunk.computeIfAbsent(chunkCoord, k -> new ArrayList<>()).add(outpost);
+
             // Place outpost structure
             Object schematic = plugin.getSchematicUtils().loadSchematic("trader_outpost");
             if (schematic != null) {
                 plugin.getSchematicUtils().placeSchematic(schematic, location.getWorld(), 
                         location.getBlockX(), location.getBlockY(), location.getBlockZ(), 0);
             }
-            
+
             // Spawn trader NPC
             spawnTraderNPC(outpost);
-            
+
             return outpostId;
         } catch (Exception e) {
             plugin.getLogger().severe("Error creating trader outpost: " + e.getMessage());
@@ -195,7 +212,7 @@ public class TraderManager {
             return null;
         }
     }
-    
+
     /**
      * Spawn a trader NPC at an outpost
      * 
@@ -206,7 +223,7 @@ public class TraderManager {
         try {
             Location spawnLoc = outpost.getLocation().clone().add(0.5, 1, 0.5);
             Entity entity;
-            
+
             if (useCitizens) {
                 // If Citizens is available, use it
                 // This is a placeholder - actual implementation would use Citizens API
@@ -214,7 +231,7 @@ public class TraderManager {
             } else {
                 // Fall back to vanilla entities
                 entity = spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.VILLAGER);
-                
+
                 // Configure the villager
                 Villager villager = (Villager) entity;
                 villager.setCustomName(ChatColor.GOLD + "Trader");
@@ -225,15 +242,15 @@ public class TraderManager {
                 villager.setAI(false);
                 villager.setInvulnerable(true);
             }
-            
+
             // Create the trader NPC
             UUID traderId = UUID.randomUUID();
             TraderNPC trader = new TraderNPC(traderId, entity, outpost);
             traders.put(traderId, trader);
-            
+
             // Update the outpost with the NPC ID
             outpost.setNpcId(traderId);
-            
+
             return traderId;
         } catch (Exception e) {
             plugin.getLogger().severe("Error spawning trader NPC: " + e.getMessage());
@@ -241,7 +258,7 @@ public class TraderManager {
             return null;
         }
     }
-    
+
     /**
      * Handle a player interacting with a trader
      * 
@@ -254,10 +271,10 @@ public class TraderManager {
         if (trader == null) {
             return false;
         }
-        
+
         return trader.openMenu(player);
     }
-    
+
     /**
      * Get a trader by ID
      * 
@@ -267,7 +284,7 @@ public class TraderManager {
     public TraderNPC getTrader(UUID id) {
         return traders.get(id);
     }
-    
+
     /**
      * Get an outpost by ID
      * 
@@ -277,7 +294,7 @@ public class TraderManager {
     public TraderOutpost getOutpost(UUID id) {
         return outposts.get(id);
     }
-    
+
     /**
      * Get all trader outposts
      * 
@@ -286,7 +303,7 @@ public class TraderManager {
     public List<TraderOutpost> getAllTraderOutposts() {
         return new ArrayList<>(outposts.values());
     }
-    
+
     /**
      * Register a trader outpost from a structure
      * 
@@ -296,17 +313,25 @@ public class TraderManager {
     public UUID registerTraderOutpost(StructureManager.Structure structure) {
         Location location = structure.getLocation();
         UUID outpostId = structure.getId();
-        
+
         // Create outpost
         TraderOutpost outpost = new TraderOutpost(outpostId, location);
         outposts.put(outpostId, outpost);
-        
+
+        // Add to spatial partitioning maps
+        World world = location.getWorld();
+        if (world != null) {
+            outpostsByWorld.computeIfAbsent(world, k -> new ArrayList<>()).add(outpost);
+        }
+        ChunkCoordinate chunkCoord = new ChunkCoordinate(location.getChunk());
+        outpostsByChunk.computeIfAbsent(chunkCoord, k -> new ArrayList<>()).add(outpost);
+
         // Spawn trader NPC
         spawnTraderNPC(outpost);
-        
+
         return outpostId;
     }
-    
+
     /**
      * Get random trade stock
      * 
@@ -317,7 +342,7 @@ public class TraderManager {
     public Map<org.bukkit.inventory.ItemStack, Integer> getRandomStock(int tier, String category) {
         // This is a placeholder - actual implementation would generate stock based on config
         Map<org.bukkit.inventory.ItemStack, Integer> stock = new HashMap<>();
-        
+
         // Just add some random items
         org.bukkit.Material[] materials = {
             org.bukkit.Material.DIAMOND_SWORD,
@@ -327,18 +352,18 @@ public class TraderManager {
             org.bukkit.Material.COOKED_BEEF,
             org.bukkit.Material.GOLDEN_APPLE
         };
-        
+
         for (int i = 0; i < 3 + tier; i++) {
             int index = ThreadLocalRandom.current().nextInt(materials.length);
             org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(materials[index]);
             int price = (tier + 1) * 10 + ThreadLocalRandom.current().nextInt(50);
-            
+
             stock.put(item, price);
         }
-        
+
         return stock;
     }
-    
+
     /**
      * Save traders to database
      */
@@ -346,7 +371,7 @@ public class TraderManager {
         // TODO: Implement database saving
         // This is a placeholder - actual implementation would save to database
     }
-    
+
     /**
      * Clean up resources when the plugin is disabled
      */
@@ -355,32 +380,35 @@ public class TraderManager {
         if (outpostTask != null) {
             outpostTask.cancel();
         }
-        
+
         // Save data
         saveTraders();
-        
+
         // Remove NPCs
         for (TraderNPC trader : traders.values()) {
             if (trader.getEntity() != null && trader.getEntity().isValid()) {
                 trader.getEntity().remove();
             }
         }
-        
+
         // Clear collections
         traders.clear();
         outposts.clear();
+
+        outpostsByWorld.clear();
+        outpostsByChunk.clear();
     }
-    
+
     /**
      * Represents a trader outpost
      */
     public class TraderOutpost {
-        
+
         private final UUID id;
         private final Location location;
         private UUID npcId;
         private boolean open;
-        
+
         /**
          * Constructor for TraderOutpost
          * 
@@ -392,7 +420,7 @@ public class TraderManager {
             this.location = location;
             this.open = false;
         }
-        
+
         /**
          * Get the outpost ID
          * 
@@ -401,7 +429,7 @@ public class TraderManager {
         public UUID getId() {
             return id;
         }
-        
+
         /**
          * Get the structure ID (alias for getId for compatibility)
          * 
@@ -410,7 +438,7 @@ public class TraderManager {
         public UUID getStructureId() {
             return id;
         }
-        
+
         /**
          * Get the location
          * 
@@ -419,7 +447,7 @@ public class TraderManager {
         public Location getLocation() {
             return location;
         }
-        
+
         /**
          * Check if the outpost is open
          * 
@@ -428,7 +456,7 @@ public class TraderManager {
         public boolean isOpen() {
             return open;
         }
-        
+
         /**
          * Set whether the outpost is open
          * 
@@ -437,7 +465,7 @@ public class TraderManager {
         public void setOpen(boolean open) {
             this.open = open;
         }
-        
+
         /**
          * Get the NPC ID
          * 
@@ -446,7 +474,7 @@ public class TraderManager {
         public UUID getNpcId() {
             return npcId;
         }
-        
+
         /**
          * Set the NPC ID
          * 
@@ -454,6 +482,34 @@ public class TraderManager {
          */
         public void setNpcId(UUID npcId) {
             this.npcId = npcId;
+        }
+    }
+
+    private static class ChunkCoordinate {
+        private final int x;
+        private final int z;
+
+        public ChunkCoordinate(Chunk chunk) {
+            this.x = chunk.getX();
+            this.z = chunk.getZ();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            ChunkCoordinate that = (ChunkCoordinate) o;
+
+            if (x != that.x) return false;
+            return z == that.z;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = x;
+            result = 31 * result + z;
+            return result;
         }
     }
 }

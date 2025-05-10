@@ -32,8 +32,12 @@ import com.seventodie.SevenToDiePlugin;
 public class DatabaseManager {
     
     private final SevenToDiePlugin plugin;
-    private Connection connection;
+    private HikariDataSource connectionPool;
     private boolean inMemoryMode = false;
+    private static final int MAX_POOL_SIZE = 10;
+    private static final int CONNECTION_TIMEOUT = 5000;
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY = 1000;
     
     // Database file
     private File databaseFile;

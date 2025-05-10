@@ -161,30 +161,63 @@ public class RoadGenerator {
     private void generateRoadSegment(World world, int blockX, int blockZ, boolean isXAxis, boolean isMainRoad, int roadHeight) {
         int roadWidth = isMainRoad ? ROAD_WIDTH_MAIN : ROAD_WIDTH_SECONDARY;
         
-        // Calculate road start and end coordinates
-        int roadStart, roadEnd;
+        // Pre-calculate coordinates and materials
+        int roadStart = isXAxis ? (blockZ + 8 - roadWidth / 2) : (blockX + 8 - roadWidth / 2);
+        int roadEnd = roadStart + roadWidth;
+        
+        // Batch block changes for better performance
+        List<Block> roadBlocks = new ArrayList<>();
+        List<Block> curbBlocks = new ArrayList<>();
+        List<Block> supportBlocks = new ArrayList<>();
+        
+        // Generate coordinates
         if (isXAxis) {
-            // Road running along X axis
-            roadStart = blockZ + 8 - roadWidth / 2;
-            roadEnd = roadStart + roadWidth;
-            
-            // Generate road along the entire X length of the chunk
             for (int x = blockX; x < blockX + 16; x++) {
                 for (int z = roadStart; z < roadEnd; z++) {
-                    placeRoadBlock(world, x, roadHeight, z, z == roadStart || z == roadEnd - 1);
+                    Block block = world.getBlockAt(x, roadHeight, z);
+                    if (z == roadStart || z == roadEnd - 1) {
+                        curbBlocks.add(block);
+                    } else {
+                        roadBlocks.add(block);
+                    }
+                    // Add support block
+                    Block support = world.getBlockAt(x, roadHeight - 1, z);
+                    if (support.getType() == Material.AIR || 
+                        support.getType() == Material.WATER ||
+                        support.getType().isItem()) {
+                        supportBlocks.add(support);
+                    }
                 }
             }
         } else {
-            // Road running along Z axis
-            roadStart = blockX + 8 - roadWidth / 2;
-            roadEnd = roadStart + roadWidth;
-            
-            // Generate road along the entire Z length of the chunk
             for (int z = blockZ; z < blockZ + 16; z++) {
                 for (int x = roadStart; x < roadEnd; x++) {
-                    placeRoadBlock(world, x, roadHeight, z, x == roadStart || x == roadEnd - 1);
+                    Block block = world.getBlockAt(x, roadHeight, z);
+                    if (x == roadStart || x == roadEnd - 1) {
+                        curbBlocks.add(block);
+                    } else {
+                        roadBlocks.add(block);
+                    }
+                    // Add support block
+                    Block support = world.getBlockAt(x, roadHeight - 1, z);
+                    if (support.getType() == Material.AIR || 
+                        support.getType() == Material.WATER ||
+                        support.getType().isItem()) {
+                        supportBlocks.add(support);
+                    }
                 }
             }
+        }
+        
+        // Batch apply changes
+        roadBlocks.forEach(block -> block.setType(ROAD_MATERIAL, false));
+        curbBlocks.forEach(block -> block.setType(ROAD_CURB_MATERIAL, false));
+        supportBlocks.forEach(block -> block.setType(Material.STONE, false));
+        
+        // Update physics once for the entire area
+        if (!roadBlocks.isEmpty()) {
+            Block first = roadBlocks.get(0);
+            first.getWorld().requestChunkLoadAt(first.getChunk().getX(), first.getChunk().getZ());
         }
     }
     
