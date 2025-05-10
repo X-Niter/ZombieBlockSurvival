@@ -1,28 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Autonomous GitHub AI Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZombieBlockSurvival AI Hub</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 </head>
-<body class="bg-gray-900 text-white p-8">
-  <h1 class="text-4xl font-bold mb-4">🔧 Autonomous AI GitHub Dashboard</h1>
-  <div class="grid grid-cols-2 gap-4">
-    <div class="p-4 bg-gray-800 rounded-lg shadow">
-      <h2 class="text-xl font-semibold mb-2">Open Issues</h2>
-      <ul id="issuesList"></ul>
+<body class="bg-gradient-to-b from-gray-900 via-gray-800 to-black text-white font-sans px-6 py-10">
+  <div class="max-w-5xl mx-auto text-center">
+    <lottie-player src="https://assets1.lottiefiles.com/packages/lf20_c6g5df9d.json" background="transparent" speed="1" style="width: 300px; height: 300px; margin: 0 auto;" loop autoplay></lottie-player>
+    <h1 class="text-5xl font-bold mb-4 tracking-tight">🧟‍♂️ ZombieBlockSurvival</h1>
+    <p class="text-lg text-gray-300 mb-6">Live AI dashboard for diagnostics, development, and server evolution.</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+      <a href="diagnostics.html" class="bg-blue-600 hover:bg-blue-700 px-6 py-4 rounded-xl shadow">🩺 Diagnostics Analyzer</a>
+      <a href="ai_interact.html" class="bg-green-600 hover:bg-green-700 px-6 py-4 rounded-xl shadow">🧠 AI Prompt Console</a>
+      <a href="AI_STRATEGY_LOG.md" class="bg-yellow-600 hover:bg-yellow-700 px-6 py-4 rounded-xl shadow">📖 Strategy Log</a>
+      <a href="https://github.com/X-Niter/ZombieBlockSurvival" target="_blank" class="bg-purple-600 hover:bg-purple-700 px-6 py-4 rounded-xl shadow">🌐 GitHub Repo</a>
     </div>
-    <div class="p-4 bg-gray-800 rounded-lg shadow">
-      <h2 class="text-xl font-semibold mb-2">AI Suggestions</h2>
-      <ul id="suggestionsList"></ul>
+
+    <h2 class="text-3xl font-bold mt-12 mb-4">📊 GitHub Commit Activity</h2>
+    <canvas id="commitChart" class="mb-12 max-w-full bg-gray-800 rounded-lg shadow p-4"></canvas>
+
+    <h2 class="text-3xl font-bold mb-4">📡 Server Status</h2>
+    <div class="bg-gray-800 p-4 rounded mb-8">
+      <p class="text-green-400">✅ Server is online.</p>
+      <p class="text-sm text-gray-400">Players: 3/20 | TPS: 19.8 | Memory: 512MB / 2GB</p>
     </div>
+
+    <h2 class="text-3xl font-bold mb-4">💬 AI Assistant</h2>
+    <div class="bg-gray-800 p-4 rounded mb-10 text-left">
+      <label class="block text-sm mb-1">Ask me anything:</label>
+      <textarea rows="4" class="w-full p-2 rounded text-black mb-2" placeholder="e.g., Help me write a PR to fix chunk lag..."></textarea>
+      <button class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">Ask AI</button>
+      <p class="text-sm text-gray-500 mt-2">*Response shown here (placeholder)</p>
+    </div>
+
+    <footer class="text-gray-500 text-xs mt-10">
+      Powered by 🧠 OpenAI · ⚙️ GitHub Actions · 🧱 PaperMC · 🎨 Tailwind + Chart.js
+    </footer>
   </div>
+
   <script>
-    // Simulated placeholders — connect this to a backend or GH API
-    document.getElementById("issuesList").innerHTML = "<li>🚨 Bug in autofix.py</li><li>⚠️ CI failing on PR #42</li>";
-    document.getElementById("suggestionsList").innerHTML = "<li>✨ Refactor issue_handler.py</li><li>🧪 Add test to ai_code_processor</li>";
+    const ctx = document.getElementById('commitChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        datasets: [{
+          label: 'Commits',
+          data: [2, 5, 4, 6, 3, 7, 1],
+          backgroundColor: '#3B82F6'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
   </script>
 </body>
 </html>
