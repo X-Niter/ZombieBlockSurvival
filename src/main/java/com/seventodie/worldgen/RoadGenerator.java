@@ -18,23 +18,23 @@ import com.seventodie.SevenToDiePlugin;
  * that connect different zones and structures.
  */
 public class RoadGenerator {
-    
+
     private final SevenToDiePlugin plugin;
     private final Random random;
-    
+
     // Road generation parameters
     private static final int MAIN_ROAD_SPACING = 512; // Distance between main roads
     private static final int SECONDARY_ROAD_SPACING = 128; // Distance between secondary roads
     private static final int ROAD_WIDTH_MAIN = 5; // Width of main roads
     private static final int ROAD_WIDTH_SECONDARY = 3; // Width of secondary roads
-    
+
     // Materials
     private static final Material ROAD_MATERIAL = Material.BLACK_CONCRETE;
     private static final Material ROAD_CURB_MATERIAL = Material.GRAY_CONCRETE;
-    
+
     // Road nodes for connectivity
     private List<RoadNode> roadNodes = new ArrayList<>();
-    
+
     /**
      * Represents a node in the road network
      */
@@ -42,19 +42,19 @@ public class RoadGenerator {
         int x, z;
         List<RoadNode> connections = new ArrayList<>();
         boolean isMainNode;
-        
+
         public RoadNode(int x, int z, boolean isMainNode) {
             this.x = x;
             this.z = z;
             this.isMainNode = isMainNode;
         }
     }
-    
+
     public RoadGenerator(SevenToDiePlugin plugin) {
         this.plugin = plugin;
         this.random = new Random();
     }
-    
+
     /**
      * Generates roads for a chunk that's being generated
      * 
@@ -66,34 +66,34 @@ public class RoadGenerator {
         // Convert to block coordinates
         int blockX = chunkX * 16;
         int blockZ = chunkZ * 16;
-        
+
         // Check if this chunk should contain main roads
         boolean hasMainRoadX = isNearMainRoad(blockX, MAIN_ROAD_SPACING);
         boolean hasMainRoadZ = isNearMainRoad(blockZ, MAIN_ROAD_SPACING);
-        
+
         // Check if this chunk should contain secondary roads
         boolean hasSecondaryRoadX = isNearMainRoad(blockX, SECONDARY_ROAD_SPACING);
         boolean hasSecondaryRoadZ = isNearMainRoad(blockZ, SECONDARY_ROAD_SPACING);
-        
+
         // Generate the roads if needed
         if (hasMainRoadX || hasMainRoadZ || hasSecondaryRoadX || hasSecondaryRoadZ) {
             // Find the highest point in the chunk for road height
             int roadHeight = findAverageGroundHeight(world, blockX, blockZ);
-            
+
             // Create a road node if this is an intersection
             if ((hasMainRoadX || hasSecondaryRoadX) && (hasMainRoadZ || hasSecondaryRoadZ)) {
                 // This is a road intersection - add to road nodes
                 boolean isMainNode = hasMainRoadX && hasMainRoadZ;
                 createRoadNode(world, blockX + 8, roadHeight, blockZ + 8, isMainNode);
             }
-            
+
             // Generate the actual roads
             if (hasMainRoadX) {
                 generateRoadSegment(world, blockX, blockZ, true, true, roadHeight);
             } else if (hasSecondaryRoadX) {
                 generateRoadSegment(world, blockX, blockZ, true, false, roadHeight);
             }
-            
+
             if (hasMainRoadZ) {
                 generateRoadSegment(world, blockX, blockZ, false, true, roadHeight);
             } else if (hasSecondaryRoadZ) {
@@ -101,7 +101,7 @@ public class RoadGenerator {
             }
         }
     }
-    
+
     /**
      * Create a road node at the specified coordinates
      * 
@@ -114,16 +114,16 @@ public class RoadGenerator {
     private void createRoadNode(World world, int x, int y, int z, boolean isMainNode) {
         RoadNode node = new RoadNode(x, z, isMainNode);
         roadNodes.add(node);
-        
+
         // Connect to nearby nodes
         connectToNearbyNodes(node);
-        
+
         // If it's a main node, inform the structure manager to place structures around it
         if (isMainNode) {
             plugin.getStructureManager().scheduleStructuresAroundNode(world, x, y, z);
         }
     }
-    
+
     /**
      * Connect a road node to nearby existing nodes
      * 
@@ -133,13 +133,13 @@ public class RoadGenerator {
         // Find nodes that are aligned on the same road
         for (RoadNode existingNode : roadNodes) {
             if (existingNode == node) continue;
-            
+
             // Check if nodes are on the same X or Z line (road alignment)
             if (existingNode.x == node.x || existingNode.z == node.z) {
                 // Check distance - connect if they're close enough
                 double distance = Math.sqrt(Math.pow(existingNode.x - node.x, 2) + 
                                            Math.pow(existingNode.z - node.z, 2));
-                
+
                 if (distance < MAIN_ROAD_SPACING * 1.5) {
                     node.connections.add(existingNode);
                     existingNode.connections.add(node);
@@ -147,7 +147,7 @@ public class RoadGenerator {
             }
         }
     }
-    
+
     /**
      * Generates a segment of road in a chunk
      * 
@@ -158,36 +158,71 @@ public class RoadGenerator {
      * @param isMainRoad True if this is a main road
      * @param roadHeight The Y level for the road
      */
+    private static final int BATCH_SIZE = 64;
+    
     private void generateRoadSegment(World world, int blockX, int blockZ, boolean isXAxis, boolean isMainRoad, int roadHeight) {
         int roadWidth = isMainRoad ? ROAD_WIDTH_MAIN : ROAD_WIDTH_SECONDARY;
-        
-        // Calculate road start and end coordinates
-        int roadStart, roadEnd;
+
+        // Pre-calculate coordinates and materials
+        int roadStart = isXAxis ? (blockZ + 8 - roadWidth / 2) : (blockX + 8 - roadWidth / 2);
+        int roadEnd = roadStart + roadWidth;
+
+        // Batch block changes for better performance
+        List<Block> roadBlocks = new ArrayList<>();
+        List<Block> curbBlocks = new ArrayList<>();
+        List<Block> supportBlocks = new ArrayList<>();
+
+        // Generate coordinates
         if (isXAxis) {
-            // Road running along X axis
-            roadStart = blockZ + 8 - roadWidth / 2;
-            roadEnd = roadStart + roadWidth;
-            
-            // Generate road along the entire X length of the chunk
             for (int x = blockX; x < blockX + 16; x++) {
                 for (int z = roadStart; z < roadEnd; z++) {
-                    placeRoadBlock(world, x, roadHeight, z, z == roadStart || z == roadEnd - 1);
+                    Block block = world.getBlockAt(x, roadHeight, z);
+                    if (z == roadStart || z == roadEnd - 1) {
+                        curbBlocks.add(block);
+                    } else {
+                        roadBlocks.add(block);
+                    }
+                    // Add support block
+                    Block support = world.getBlockAt(x, roadHeight - 1, z);
+                    if (support.getType() == Material.AIR || 
+                        support.getType() == Material.WATER ||
+                        support.getType().isItem()) {
+                        supportBlocks.add(support);
+                    }
                 }
             }
         } else {
-            // Road running along Z axis
-            roadStart = blockX + 8 - roadWidth / 2;
-            roadEnd = roadStart + roadWidth;
-            
-            // Generate road along the entire Z length of the chunk
             for (int z = blockZ; z < blockZ + 16; z++) {
                 for (int x = roadStart; x < roadEnd; x++) {
-                    placeRoadBlock(world, x, roadHeight, z, x == roadStart || x == roadEnd - 1);
+                    Block block = world.getBlockAt(x, roadHeight, z);
+                    if (x == roadStart || x == roadEnd - 1) {
+                        curbBlocks.add(block);
+                    } else {
+                        roadBlocks.add(block);
+                    }
+                    // Add support block
+                    Block support = world.getBlockAt(x, roadHeight - 1, z);
+                    if (support.getType() == Material.AIR || 
+                        support.getType() == Material.WATER ||
+                        support.getType().isItem()) {
+                        supportBlocks.add(support);
+                    }
                 }
             }
         }
+
+        // Batch apply changes
+        roadBlocks.forEach(block -> block.setType(ROAD_MATERIAL, false));
+        curbBlocks.forEach(block -> block.setType(ROAD_CURB_MATERIAL, false));
+        supportBlocks.forEach(block -> block.setType(Material.STONE, false));
+
+        // Update physics once for the entire area
+        if (!roadBlocks.isEmpty()) {
+            Block first = roadBlocks.get(0);
+            first.getWorld().requestChunkLoadAt(first.getChunk().getX(), first.getChunk().getZ());
+        }
     }
-    
+
     /**
      * Places a road block at the specified location
      * 
@@ -198,18 +233,19 @@ public class RoadGenerator {
      * @param isCurb Whether this block is a curb
      */
     private void placeRoadBlock(World world, int x, int y, int z, boolean isCurb) {
-        // Get the block and set it to road material
-        Block block = world.getBlockAt(x, y, z);
-        block.setType(isCurb ? ROAD_CURB_MATERIAL : ROAD_MATERIAL);
-        
-        // Clear a few blocks above for clearance
-        for (int i = 1; i <= 3; i++) {
-            Block airBlock = world.getBlockAt(x, y + i, z);
-            if (!airBlock.getType().equals(Material.AIR)) {
-                airBlock.setType(Material.AIR);
+        try {
+            // Queue block changes for batch processing
+            Block block = world.getBlockAt(x, y, z);
+            block.setType(isCurb ? ROAD_CURB_MATERIAL : ROAD_MATERIAL, false);
+
+            // Batch update physics once per chunk
+            if (x % 16 == 0 && z % 16 == 0) {
+                world.getChunkAt(x >> 4, z >> 4).setForceLoaded(true);
             }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to place road block at " + x + "," + y + "," + z + ": " + e.getMessage());
         }
-        
+
         // Add support blocks below if needed
         Block supportBlock = world.getBlockAt(x, y - 1, z);
         if (supportBlock.getType().equals(Material.AIR) || 
@@ -218,7 +254,7 @@ public class RoadGenerator {
             supportBlock.setType(Material.STONE);
         }
     }
-    
+
     /**
      * Checks if a coordinate is near a main road
      * 
@@ -231,7 +267,7 @@ public class RoadGenerator {
         int distToRoad = Math.abs(coord % spacing - (spacing / 2));
         return distToRoad < 8; // Check if within 8 blocks of the road center
     }
-    
+
     /**
      * Find the average ground height in a chunk for road placement
      * 
@@ -243,7 +279,7 @@ public class RoadGenerator {
     private int findAverageGroundHeight(World world, int blockX, int blockZ) {
         int totalHeight = 0;
         int sampleCount = 0;
-        
+
         // Sample several points in the chunk
         for (int x = 0; x < 16; x += 4) {
             for (int z = 0; z < 16; z += 4) {
@@ -252,11 +288,11 @@ public class RoadGenerator {
                 sampleCount++;
             }
         }
-        
+
         // Return average height
         return sampleCount > 0 ? totalHeight / sampleCount : 64;
     }
-    
+
     /**
      * Get the highest non-air block at a position
      * 
@@ -286,7 +322,7 @@ public class RoadGenerator {
         }
         return 64; // Default if nothing is found
     }
-    
+
     /**
      * Gets a list of all road nodes for other systems to use
      * 
@@ -294,16 +330,16 @@ public class RoadGenerator {
      */
     public List<Location> getRoadNodeLocations(World world) {
         List<Location> locations = new ArrayList<>();
-        
+
         for (RoadNode node : roadNodes) {
             // Get the highest block at this location for accurate Y
             int y = getHighestBlockYAt(world, node.x, node.z);
             locations.add(new Location(world, node.x, y, node.z));
         }
-        
+
         return locations;
     }
-    
+
     /**
      * Gets the nearest road node to a position
      * 
@@ -314,7 +350,7 @@ public class RoadGenerator {
     public RoadNode getNearestRoadNode(int x, int z) {
         RoadNode nearest = null;
         double minDistance = Double.MAX_VALUE;
-        
+
         for (RoadNode node : roadNodes) {
             double distance = Math.sqrt(Math.pow(node.x - x, 2) + Math.pow(node.z - z, 2));
             if (distance < minDistance) {
@@ -322,10 +358,10 @@ public class RoadGenerator {
                 nearest = node;
             }
         }
-        
+
         return nearest;
     }
-    
+
     /**
      * Generate roads for a world using a custom chunk generator
      * 
