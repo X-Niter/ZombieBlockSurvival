@@ -1,0 +1,33 @@
+name: Auto Fix
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  checks: write
+
+concurrency:
+  group: autofix
+  cancel-in-progress: true
+
+jobs:
+  format-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run auto-formatter
+        run: |
+          bash .github/scripts/autofix.sh
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "chore: auto-format code"
+          file_pattern: .
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "Auto-format and lint fixes"
+          body: "This PR was created automatically via the Auto Fix workflow."
+          branch: autofix/format-updates

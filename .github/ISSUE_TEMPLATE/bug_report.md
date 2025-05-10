@@ -1,21 +1,18 @@
 ---
 name: Bug report
 about: Create a report to help us improve
-title: "[BUG] "
+title: '[BUG] '
 labels: bug
 assignees: ''
-
 ---
-
 **Describe the bug**
 A clear and concise description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce the behavior:
-1. Start server with '...'
-2. Execute command '....'
-3. Interact with '....'
-4. See error
+1. ...
+2. ...
+3. ...
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
@@ -23,16 +20,5 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**Server Environment:**
- - Server Type: [e.g. Paper, Spigot]
- - Server Version: [e.g. 1.21.4]
- - Java Version: [e.g. Java 21]
- - Plugin Version: [e.g. 1.0.0]
-
 **Additional context**
 Add any other context about the problem here.
-
-**Server Logs**
-```
-Paste relevant logs here
-```
