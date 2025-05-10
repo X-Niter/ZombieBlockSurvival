@@ -34,7 +34,7 @@ def setup_github_api(token):
 def get_issue_details(repo, issue_number, headers):
     """Fetch details about a GitHub issue."""
     url = f'https://api.github.com/repos/{repo}/issues/{issue_number}'
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=10)
     if response.status_code != 200:
         print(f"Error fetching issue: {response.status_code}")
         print(response.json())
@@ -44,7 +44,7 @@ def get_issue_details(repo, issue_number, headers):
 def get_repository_files(repo, headers, path=""):
     """Recursively get repository files."""
     url = f'https://api.github.com/repos/{repo}/contents/{path}'
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=10)
     if response.status_code != 200:
         print(f"Error fetching repository contents: {response.status_code}")
         return []
@@ -66,7 +66,7 @@ def get_repository_files(repo, headers, path=""):
 def get_file_content(repo, file_path, headers):
     """Get content of a specific file."""
     url = f'https://api.github.com/repos/{repo}/contents/{file_path}'
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=10)
     if response.status_code != 200:
         print(f"Error fetching file {file_path}: {response.status_code}")
         return None
