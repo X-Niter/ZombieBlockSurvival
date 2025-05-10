@@ -11,4 +11,4 @@ jobs:
       - name: Install Dependencies
         run: pip install openai
       - name: Run PR Reviewer
-        run: python scripts/pr_ai_reviewer.py
+        run: python .github/scripts/pr_ai_reviewer.py

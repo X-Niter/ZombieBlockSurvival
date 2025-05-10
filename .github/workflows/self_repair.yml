@@ -13,4 +13,4 @@ jobs:
       - name: Self-Heal Workflow
         run: |
           pip install openai
-          python scripts/ai_engine.py
+          python .github/scripts/ai_engine.py

@@ -13,4 +13,4 @@ jobs:
       - name: Run AI AutoFix
         run: |
           pip install openai
-          python scripts/ai_engine.py
+          python .github/scripts/ai_engine.py

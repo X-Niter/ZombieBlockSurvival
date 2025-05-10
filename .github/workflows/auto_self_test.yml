@@ -28,7 +28,7 @@ jobs:
 
       - name: Run Self-Test and Diagnostics
         run: |
-          python .github/scripts/self_test_and_fix.py
+          python .github/.github/scripts/self_test_and_fix.py
 
       - name: Upload Diagnostics Log
         if: always()
