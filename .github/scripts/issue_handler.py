@@ -8,8 +8,11 @@ def load_event():
     path = os.getenv('GITHUB_EVENT_PATH')
     return json.load(open(path))
 
-def is_duplicate(repo, title):
+def is_duplicate(repo, title, current_number=None):
+    """Check if another open issue has the same title."""
     for issue in repo.get_issues(state='open'):
+        if issue.number == current_number:
+            continue
         if title.strip().lower() == issue.title.strip().lower():
             return True
     return False
@@ -33,7 +36,7 @@ def main():
         title = issue.get('title', '')
         number = issue.get('number')
     # Deduplicate
-    if is_duplicate(repo, title):
+        if is_duplicate(repo, title, number):
         return
     # Generate response
     prompt = f"""You are a senior software engineer. Provide a helpful response or fix suggestion for this issue or comment:\n{text}"""
