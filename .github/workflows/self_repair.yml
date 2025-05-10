@@ -1,0 +1,16 @@
+name: Workflow Self-Repair
+on:
+  workflow_run:
+    workflows: ["AutoFix", "CI"]
+    types: [completed]
+
+jobs:
+  fix_workflow:
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Self-Heal Workflow
+        run: |
+          pip install openai
+          python scripts/ai_engine.py

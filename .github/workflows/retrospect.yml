@@ -1,22 +1,15 @@
-name: Retrospective AI Review
+name: AI Retrospective Review
 on:
   schedule:
-    - cron: '0 4 * * *'  # Daily at 4AM UTC
+    - cron: '0 3 * * 1'  # Weekly on Monday
   workflow_dispatch:
 
 jobs:
-  analyze:
+  retrospective:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      - name: Install dependencies
-        run: pip install openai PyGithub
+      - uses: actions/checkout@v3
       - name: Run Retrospective AI
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python .github/scripts/retrospective_ai.py
+        run: |
+          pip install openai
+          python scripts/ai_engine.py

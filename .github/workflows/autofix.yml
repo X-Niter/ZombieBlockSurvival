@@ -1,34 +1,16 @@
-name: Auto Fix
+name: AutoFix
 on:
-  schedule:
-    - cron: '*/30 * * * *'
+  push:
+    paths:
+      - '**/*.py'
   workflow_dispatch:
 
-permissions:
-  contents: write
-  checks: write
-
-concurrency:
-  group: autofix
-  cancel-in-progress: true
-
 jobs:
-  format-and-commit:
+  autofix:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Run formatting scripts
+      - uses: actions/checkout@v3
+      - name: Run AI AutoFix
         run: |
-          bash .github/scripts/autofix.sh
-          bash .github/scripts/workflow_self_fix.sh
-      - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "chore: auto-format & self-fix workflows"
-          file_pattern: .
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          title: "Auto-format, workflow self-fixes"
-          body: "Automated formatting and workflow self-healing."
-          branch: autofix/self-fix-updates
+          pip install openai
+          python scripts/ai_engine.py

@@ -1,0 +1,14 @@
+name: Pull Request AI Reviewer
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Dependencies
+        run: pip install openai
+      - name: Run PR Reviewer
+        run: python scripts/pr_ai_reviewer.py
