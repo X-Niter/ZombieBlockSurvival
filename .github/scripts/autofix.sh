@@ -15,5 +15,9 @@ fi
 
 # Java formatting
 if [ -f pom.xml ]; then
-  mvn com.coveo:fmt-maven-plugin:format
+if mvn com.coveo:fmt-maven-plugin:format; then
+  echo "Java formatting successful."
+else
+  echo "Skipping Java formatting due to failure."
+fi
 fi
