@@ -32,7 +32,7 @@ jobs:
 
       - name: Upload Diagnostics Log
         if: always()
-        uses: actions/upload-artifact@8b67cc3871a42e2580c71ac41c9a1e0db0c877d5
+        uses: actions/upload-artifact@v2
         with:
           name: ai-diagnostics-log
           path: ai_diagnostics.log
