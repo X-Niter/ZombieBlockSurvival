@@ -1,0 +1,15 @@
+name: 🔍 Harvest Community Workflows
+on:
+  schedule:
+    - cron: '0 3 * * *'
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install PyGithub
+        run: pip install PyGithub
+      - name: Harvest workflows
+        run: python .github/scripts/harvest_workflows.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
