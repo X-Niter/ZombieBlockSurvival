@@ -71,5 +71,27 @@
       document.getElementById("testResults").innerText = results;
     }
   </script>
+
+<div class="text-center mt-8">
+  <p class="text-sm text-gray-400 mb-2">Or authenticate via OAuth</p>
+  <button onclick="startOAuth()" class="bg-gray-700 hover:bg-gray-600 px-6 py-2 rounded text-white text-sm">
+    🔗 Sign in with GitHub
+  </button>
+</div>
+
+<script>
+function startOAuth() {
+  const clientID = document.getElementById("clientID").value.trim();
+  if (!clientID) {
+    alert("⚠️ Please enter your GitHub Client ID first.");
+    return;
+  }
+  localStorage.setItem("clientID", clientID);
+  const redirectURI = encodeURIComponent(window.location.origin + window.location.pathname.replace("setup.html", "auth_callback.html"));
+  const url = `https://github.com/login/oauth/authorize?client_id=${clientID}&redirect_uri=${redirectURI}&scope=repo%20user%20workflow`;
+  window.location.href = url;
+}
+</script>
+
 </body>
 </html>
