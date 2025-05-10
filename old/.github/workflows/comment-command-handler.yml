@@ -1,0 +1,106 @@
+name: Comment Command Handler
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  process-commands:
+    runs-on: ubuntu-latest
+    if: contains(github.event.comment.body, '@ai')
+    
+    steps:
+      - name: Extract command
+        id: extract-command
+        run: |
+          COMMENT="${{ github.event.comment.body }}"
+          
+          # Extract the AI command
+          if [[ "$COMMENT" =~ @ai\ ([a-z]+) ]]; then
+            COMMAND="${BASH_REMATCH[1]}"
+            echo "command=$COMMAND" >> $GITHUB_OUTPUT
+            echo "Detected AI command: $COMMAND"
+          else
+            echo "No valid AI command found"
+            echo "command=none" >> $GITHUB_OUTPUT
+          fi
+          
+          # Extract additional text after the command
+          if [[ "$COMMENT" =~ @ai\ ([a-z]+)\ (.*) ]]; then
+            DESCRIPTION="${BASH_REMATCH[2]}"
+            # Escape description for GitHub Actions
+            DESCRIPTION="${DESCRIPTION//'%'/'%25'}"
+            DESCRIPTION="${DESCRIPTION//$'\n'/'%0A'}"
+            DESCRIPTION="${DESCRIPTION//$'\r'/'%0D'}"
+            echo "description=$DESCRIPTION" >> $GITHUB_OUTPUT
+          else
+            echo "description=" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Map command to task
+        id: map-command
+        run: |
+          COMMAND="${{ steps.extract-command.outputs.command }}"
+          
+          case "$COMMAND" in
+            "analyze")
+              TASK="analyze-code"
+              ;;
+            "fix")
+              TASK="fix-bugs"
+              ;;
+            "implement")
+              TASK="implement-feature"
+              ;;
+            "optimize")
+              TASK="improve-performance"
+              ;;
+            *)
+              TASK="none"
+              ;;
+          esac
+          
+          echo "task=$TASK" >> $GITHUB_OUTPUT
+      
+      - name: Trigger AI Development workflow
+        if: steps.map-command.outputs.task != 'none'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const task = '${{ steps.map-command.outputs.task }}';
+            
+            // Get issue details to include in the description
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            
+            let description = issue.data.body || '';
+            
+            // Add the additional context from the command if present
+            const commandDescription = '${{ steps.extract-command.outputs.description }}';
+            if (commandDescription) {
+              description += '\n\nAdditional context from command:\n' + commandDescription;
+            }
+            
+            // Trigger the workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ai-development.yml',
+              ref: 'main',
+              inputs: {
+                task: task,
+                description: description
+              }
+            });
+            
+            // Comment to acknowledge the command
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `I've received your command \`@ai ${task.replace('-', ' ')}\`. Processing now... I'll post the results here when complete.`
+            });

@@ -4,6 +4,14 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   process-commands:
     runs-on: ubuntu-latest

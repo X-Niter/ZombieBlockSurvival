@@ -10,6 +10,14 @@ on:
         required: true
         type: number
 
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   triage-issue:
     name: Automatically Triage and Label Issue

@@ -5,6 +5,14 @@ on:
     - cron: '0 0 * * 3'  # Run every Wednesday at midnight
   workflow_dispatch:  # Allow manual triggering
 
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   scan:
     name: Scan Codebase for Issues and Optimizations
@@ -12,7 +20,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch all history for proper analysis
       

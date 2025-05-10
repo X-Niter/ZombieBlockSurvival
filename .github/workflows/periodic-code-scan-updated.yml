@@ -5,6 +5,14 @@ on:
     - cron: '0 0 * * 3'  # Run every Wednesday at midnight
   workflow_dispatch:  # Allow manual triggering
 
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   scan:
     name: Scan Codebase for Issues and Optimizations
@@ -27,7 +35,7 @@ jobs:
           pip install requests
       
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v3
         with:
           java-version: '21'
           distribution: 'temurin'
