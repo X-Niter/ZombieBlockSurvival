@@ -84,14 +84,19 @@ public class TraderManager {
     }
 
     private void updateOutposts() {
-        // Update outposts by world for better performance
+        // Group outposts by world for batch processing
+        Map<World, List<TraderOutpost>> outpostsByWorld = new HashMap<>();
+        for (TraderOutpost outpost : outposts.values()) {
+            outpostsByWorld.computeIfAbsent(outpost.getLocation().getWorld(), w -> new ArrayList<>()).add(outpost);
+        }
+
+        // Process each world's outposts together
         for (Map.Entry<World, List<TraderOutpost>> entry : outpostsByWorld.entrySet()) {
             World world = entry.getKey();
             long worldTime = world.getTime();
             boolean shouldBeOpen = worldTime >= 0 && worldTime < 12000;
 
-            // Update all outposts in this world at once
-            entry.getValue().forEach(outpost -> {
+            for (TraderOutpost outpost : entry.getValue()) {
                 if (shouldBeOpen != outpost.isOpen()) {
                     if (shouldBeOpen) {
                         openOutpost(outpost);
@@ -99,7 +104,7 @@ public class TraderManager {
                         closeOutpost(outpost);
                     }
                 }
-            });
+            }
         }
     }
 
