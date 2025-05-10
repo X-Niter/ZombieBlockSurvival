@@ -3,65 +3,338 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZombieBlockSurvival AI Hub</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>ZombieBlockSurvival Control Hub</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+  <style>
+    body {
+      background: linear-gradient(to bottom, #1e1e1e, #111);
+      background-image: url('https://i.imgur.com/I2G8EVL.jpg');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      color: #f0f0f0;
+    }
+    .glass {
+      background-color: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(10px);
+    }
+    .modal {
+      background-color: #1f2937;
+      max-width: 400px;
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-b from-gray-900 via-gray-800 to-black text-white font-sans px-6 py-10">
-  <div class="max-w-5xl mx-auto text-center">
-    <lottie-player src="https://assets1.lottiefiles.com/packages/lf20_c6g5df9d.json" background="transparent" speed="1" style="width: 300px; height: 300px; margin: 0 auto;" loop autoplay></lottie-player>
-    <h1 class="text-5xl font-bold mb-4 tracking-tight">🧟‍♂️ ZombieBlockSurvival</h1>
-    <p class="text-lg text-gray-300 mb-6">Live AI dashboard for diagnostics, development, and server evolution.</p>
+<body class="font-mono">
+  <header class="w-full text-center py-6 bg-black bg-opacity-80 shadow-md">
+    <h1 class="text-4xl font-bold tracking-widest text-red-500">🧟 ZombieBlockSurvival</h1>
+    <p class="text-sm text-gray-300">7 Days to Die-Inspired Minecraft Control Panel</p>
+  </header>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-      <a href="diagnostics.html" class="bg-blue-600 hover:bg-blue-700 px-6 py-4 rounded-xl shadow">🩺 Diagnostics Analyzer</a>
-      <a href="ai_interact.html" class="bg-green-600 hover:bg-green-700 px-6 py-4 rounded-xl shadow">🧠 AI Prompt Console</a>
-      <a href="AI_STRATEGY_LOG.md" class="bg-yellow-600 hover:bg-yellow-700 px-6 py-4 rounded-xl shadow">📖 Strategy Log</a>
-      <a href="https://github.com/X-Niter/ZombieBlockSurvival" target="_blank" class="bg-purple-600 hover:bg-purple-700 px-6 py-4 rounded-xl shadow">🌐 GitHub Repo</a>
+  <nav class="flex justify-center space-x-4 py-4 bg-black bg-opacity-60">
+    <a href="index.html" class="hover:underline">Dashboard</a>
+    <a href="diagnostics.html" class="hover:underline">Diagnostics</a>
+    <a href="ai_interact.html" class="hover:underline">AI Console</a>
+    <a href="#" onclick="toggleModal('authModal')" class="hover:underline text-yellow-300">Auth Setup</a>
+    <a href="https://github.com/X-Niter/ZombieBlockSurvival" target="_blank" class="hover:underline text-blue-400">GitHub</a>
+  </nav>
+
+  <main class="p-6 flex flex-col items-center space-y-6 glass max-w-3xl mx-auto mt-6 rounded-xl shadow-xl">
+    <h2 class="text-2xl font-bold text-red-400">Welcome, Survivor</h2>
+    <p class="text-sm text-gray-300">This dashboard is your command center. Configure tokens, run AI tools, and survive the plugin apocalypse.</p>
+
+    <button onclick="toggleModal('authModal')" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded">🔐 Configure Tokens</button>
+  
+<section class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
+  <div class="bg-gray-800 p-4 rounded shadow-lg">
+    <h3 class="text-lg font-bold mb-2">🧠 AI Status</h3>
+    <p id="aiStatus" class="text-sm text-gray-300">Checking...</p>
+  </div>
+  <div class="bg-gray-800 p-4 rounded shadow-lg">
+    <h3 class="text-lg font-bold mb-2">🔗 GitHub Status</h3>
+    <p id="ghStatus" class="text-sm text-gray-300">Checking...</p>
+  </div>
+  <div class="bg-gray-800 p-4 rounded shadow-lg sm:col-span-2">
+    <h3 class="text-lg font-bold mb-2">📋 Recent Activity</h3>
+    <ul id="activityLog" class="list-disc list-inside text-sm text-gray-300 space-y-1">
+      <li>Fetching latest commits...</li>
+    </ul>
+  </div>
+
+<div class="bg-gray-800 p-4 rounded shadow-lg sm:col-span-2 mt-4">
+  <h3 class="text-lg font-bold mb-2">🧠 Custom Prompt</h3>
+  <textarea id="aiPromptInput" rows="3" class="w-full p-2 text-sm rounded bg-gray-700 text-white mb-2" placeholder="Describe a fix, request a refactor, or ask for a change..."></textarea>
+  <button onclick="sendPrompt()" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-1 rounded text-sm">▶️ Send Prompt</button>
+</div>
+
+<div class="bg-gray-800 p-4 rounded shadow-lg sm:col-span-2 mt-4">
+  <h3 class="text-lg font-bold mb-2">🛠 GitHub Command</h3>
+  <input type="text" id="ghCommandInput" class="w-full p-2 text-sm rounded bg-gray-700 text-white mb-2" placeholder="e.g., list recent PRs">
+  <button onclick="runGHCommand()" class="bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded text-sm">▶️ Run GitHub Cmd</button>
+</div>
+
+<script>
+  async function sendPrompt() {
+    const prompt = document.getElementById("aiPromptInput").value.trim();
+    const openaiKey = localStorage.getItem("openaiKey");
+
+    if (!prompt) return alert("Enter a prompt first.");
+    if (!openaiKey) return alert("Missing OpenAI key.");
+
+    logFeed("📨 Prompt sent: " + prompt);
+
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openaiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "gpt-4",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 100
+        })
+      });
+      const json = await res.json();
+      const reply = json.choices?.[0]?.message?.content || "⚠️ No reply.";
+      logFeed("🧠 GPT: " + reply.substring(0, 120).trim() + (reply.length > 120 ? "..." : ""));
+    } catch {
+      logFeed("❌ Prompt failed: OpenAI error.");
+    }
+  }
+
+  async function runGHCommand() {
+    const command = document.getElementById("ghCommandInput").value.trim();
+    const githubToken = localStorage.getItem("githubToken");
+
+    if (!command) return alert("Type a command to run.");
+    if (!githubToken) return alert("Missing GitHub token.");
+
+    logFeed("🛠 GitHub Cmd: " + command);
+
+    if (command === "list recent PRs") {
+      try {
+        const res = await fetch("https://api.github.com/repos/X-Niter/ZombieBlockSurvival/pulls", {
+          headers: { Authorization: `token ${githubToken}` }
+        });
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          data.slice(0, 3).forEach(pr => {
+            logFeed(`🔃 PR #${pr.number}: ${pr.title}`);
+          });
+        } else {
+          logFeed("⚠️ Could not fetch PRs.");
+        }
+      } catch {
+        logFeed("❌ GitHub fetch failed.");
+      }
+    } else {
+      logFeed("⚠️ Unknown command.");
+    }
+  }
+</script>
+
+
+<div class="bg-gray-800 p-4 rounded shadow-lg sm:col-span-2 mt-4">
+  <h3 class="text-lg font-bold mb-2">📚 Prompt History</h3>
+  <ul id="promptHistory" class="list-disc list-inside text-sm text-gray-300 space-y-1">
+    <li>No history yet.</li>
+  </ul>
+</div>
+
+<script>
+  function saveToHistory(prompt, reply) {
+    let history = JSON.parse(localStorage.getItem("promptHistory") || "[]");
+    history.unshift({ prompt, reply, time: new Date().toISOString() });
+    localStorage.setItem("promptHistory", JSON.stringify(history.slice(0, 20)));  // keep only last 20
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const hist = JSON.parse(localStorage.getItem("promptHistory") || "[]");
+    const container = document.getElementById("promptHistory");
+    container.innerHTML = "";
+    if (!hist.length) {
+      container.innerHTML = "<li>No history yet.</li>";
+      return;
+    }
+    hist.forEach(entry => {
+      const li = document.createElement("li");
+      li.innerText = `[${new Date(entry.time).toLocaleTimeString()}] 🧠 ${entry.prompt.slice(0, 40)} → ${entry.reply.slice(0, 40)}...`;
+      container.appendChild(li);
+    });
+  }
+
+  // Patch into prompt submission
+  async function sendPrompt() {
+    const prompt = document.getElementById("aiPromptInput").value.trim();
+    const openaiKey = localStorage.getItem("openaiKey");
+
+    if (!prompt) return alert("Enter a prompt first.");
+    if (!openaiKey) return alert("Missing OpenAI key.");
+
+    logFeed("📨 Prompt sent: " + prompt);
+
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openaiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "gpt-4",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 100
+        })
+      });
+      const json = await res.json();
+      const reply = json.choices?.[0]?.message?.content || "⚠️ No reply.";
+      logFeed("🧠 GPT: " + reply.substring(0, 120).trim() + (reply.length > 120 ? "..." : ""));
+      saveToHistory(prompt, reply);
+    } catch {
+      logFeed("❌ Prompt failed: OpenAI error.");
+    }
+  }
+
+  // Initial render
+  renderHistory();
+</script>
+
+</section>
+<div class="bg-gray-800 p-4 rounded shadow-lg sm:col-span-2 mt-4">
+  <h3 class="text-lg font-bold mb-2">🧾 Activity Feed</h3>
+  <ul id="activityFeed" class="list-disc list-inside text-sm text-gray-300 space-y-1">
+    <li>Listening for events...</li>
+  </ul>
+</div>
+
+<script>
+  function logFeed(message) {
+    const feed = document.getElementById("activityFeed");
+    const li = document.createElement("li");
+    li.innerText = `[${new Date().toLocaleTimeString()}] ${message}`;
+    feed.appendChild(li);
+  }
+
+  // Append onto previous checkSystems logic
+  async function checkSystems() {
+    const openaiKey = localStorage.getItem("openaiKey");
+    const githubToken = localStorage.getItem("githubToken");
+
+    try {
+      const aiRes = await fetch("https://api.openai.com/v1/models", {
+        headers: { Authorization: `Bearer ${openaiKey}` }
+      });
+      if (aiRes.ok) {
+        document.getElementById("aiStatus").innerText = "✅ Connected to OpenAI";
+        logFeed("🧠 OpenAI models loaded successfully.");
+      } else {
+        document.getElementById("aiStatus").innerText = "❌ OpenAI Error";
+        logFeed("❌ Failed to access OpenAI models.");
+      }
+    } catch {
+      document.getElementById("aiStatus").innerText = "❌ OpenAI Unreachable";
+      logFeed("❌ OpenAI unreachable (network error).");
+    }
+
+    try {
+      const ghRes = await fetch("https://api.github.com/user/repos", {
+        headers: { Authorization: `token ${githubToken}` }
+      });
+      const data = await ghRes.json();
+      if (ghRes.ok) {
+        document.getElementById("ghStatus").innerText = `✅ GitHub Access Granted`;
+        logFeed("🔗 GitHub user repo list fetched.");
+        const log = document.getElementById("activityLog");
+        log.innerHTML = "";
+        (data.slice(0, 5) || []).forEach(repo => {
+          const li = document.createElement("li");
+          li.innerText = `📁 ${repo.full_name}`;
+          log.appendChild(li);
+        });
+      } else {
+        document.getElementById("ghStatus").innerText = `❌ GitHub Error`;
+        logFeed("❌ GitHub token error during repo fetch.");
+      }
+    } catch {
+      document.getElementById("ghStatus").innerText = "❌ GitHub Unreachable";
+      logFeed("❌ GitHub unreachable (network error).");
+    }
+  }
+
+  // Run once on load
+  checkSystems();
+</script>
+
+
+<script>
+  async function checkSystems() {
+    const openaiKey = localStorage.getItem("openaiKey");
+    const githubToken = localStorage.getItem("githubToken");
+
+    try {
+      const aiRes = await fetch("https://api.openai.com/v1/models", {
+        headers: { Authorization: `Bearer ${openaiKey}` }
+      });
+      document.getElementById("aiStatus").innerText = aiRes.ok ? "✅ Connected to OpenAI" : "❌ OpenAI Error";
+    } catch {
+      document.getElementById("aiStatus").innerText = "❌ OpenAI Unreachable";
+    }
+
+    try {
+      const ghRes = await fetch("https://api.github.com/user/repos", {
+        headers: { Authorization: `token ${githubToken}` }
+      });
+      const data = await ghRes.json();
+      document.getElementById("ghStatus").innerText = ghRes.ok ? `✅ GitHub Access Granted` : `❌ GitHub Error`;
+
+      const log = document.getElementById("activityLog");
+      log.innerHTML = "";
+      (data.slice(0, 5) || []).forEach(repo => {
+        const li = document.createElement("li");
+        li.innerText = `📁 ${repo.full_name}`;
+        log.appendChild(li);
+      });
+    } catch {
+      document.getElementById("ghStatus").innerText = "❌ GitHub Unreachable";
+    }
+  }
+
+  checkSystems();
+</script>
+
+</main>
+
+  <!-- Auth Modal -->
+  <div id="authModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
+    <div class="modal rounded p-6 text-white relative shadow-xl">
+      <button onclick="toggleModal('authModal')" class="absolute top-2 right-3 text-gray-400 hover:text-red-500">✖</button>
+      <h3 class="text-xl font-bold mb-4">🔐 Token Configuration</h3>
+      <label class="block mb-1 text-sm">GitHub Client ID</label>
+      <input type="text" id="clientID" class="w-full mb-3 px-2 py-1 rounded bg-gray-700 text-white" placeholder="Ov23...">
+      <label class="block mb-1 text-sm">GitHub Token (PAT)</label>
+      <input type="password" id="githubToken" class="w-full mb-3 px-2 py-1 rounded bg-gray-700 text-white" placeholder="••••••••">
+      <label class="block mb-1 text-sm">OpenAI API Key</label>
+      <input type="password" id="openaiKey" class="w-full mb-4 px-2 py-1 rounded bg-gray-700 text-white" placeholder="••••••••">
+      <button onclick="saveTokens()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">💾 Save</button>
     </div>
-
-    <h2 class="text-3xl font-bold mt-12 mb-4">📊 GitHub Commit Activity</h2>
-    <canvas id="commitChart" class="mb-12 max-w-full bg-gray-800 rounded-lg shadow p-4"></canvas>
-
-    <h2 class="text-3xl font-bold mb-4">📡 Server Status</h2>
-    <div class="bg-gray-800 p-4 rounded mb-8">
-      <p class="text-green-400">✅ Server is online.</p>
-      <p class="text-sm text-gray-400">Players: 3/20 | TPS: 19.8 | Memory: 512MB / 2GB</p>
-    </div>
-
-    <h2 class="text-3xl font-bold mb-4">💬 AI Assistant</h2>
-    <div class="bg-gray-800 p-4 rounded mb-10 text-left">
-      <label class="block text-sm mb-1">Ask me anything:</label>
-      <textarea rows="4" class="w-full p-2 rounded text-black mb-2" placeholder="e.g., Help me write a PR to fix chunk lag..."></textarea>
-      <button class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">Ask AI</button>
-      <p class="text-sm text-gray-500 mt-2">*Response shown here (placeholder)</p>
-    </div>
-
-    <footer class="text-gray-500 text-xs mt-10">
-      Powered by 🧠 OpenAI · ⚙️ GitHub Actions · 🧱 PaperMC · 🎨 Tailwind + Chart.js
-    </footer>
   </div>
 
   <script>
-    const ctx = document.getElementById('commitChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-        datasets: [{
-          label: 'Commits',
-          data: [2, 5, 4, 6, 3, 7, 1],
-          backgroundColor: '#3B82F6'
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: false }
-        }
-      }
-    });
+    function toggleModal(id) {
+      const modal = document.getElementById(id);
+      modal.classList.toggle('hidden');
+      modal.classList.toggle('flex');
+    }
+
+    function saveTokens() {
+      localStorage.setItem("clientID", document.getElementById("clientID").value.trim());
+      localStorage.setItem("githubToken", document.getElementById("githubToken").value.trim());
+      localStorage.setItem("openaiKey", document.getElementById("openaiKey").value.trim());
+      alert("✅ Tokens saved to browser memory.");
+      toggleModal('authModal');
+    }
   </script>
 </body>
 </html>
