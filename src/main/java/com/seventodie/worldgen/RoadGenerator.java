@@ -213,7 +213,6 @@ public class RoadGenerator {
         } catch (Exception e) {
             plugin.getLogger().warning("Failed to place road block at " + x + "," + y + "," + z + ": " + e.getMessage());
         }
-        }
         
         // Add support blocks below if needed
         Block supportBlock = world.getBlockAt(x, y - 1, z);

@@ -70,14 +70,19 @@ public class TraderManager {
      * Update all outposts (open/close based on time)
      */
     private void updateOutposts() {
+        // Group outposts by world for batch processing
+        Map<World, List<TraderOutpost>> outpostsByWorld = new HashMap<>();
         for (TraderOutpost outpost : outposts.values()) {
-            World world = outpost.getLocation().getWorld();
-            
-            // Get the world time
+            outpostsByWorld.computeIfAbsent(outpost.getLocation().getWorld(), w -> new ArrayList<>()).add(outpost);
+        }
+        
+        // Process each world's outposts together
+        for (Map.Entry<World, List<TraderOutpost>> entry : outpostsByWorld.entrySet()) {
+            World world = entry.getKey();
             long worldTime = world.getTime();
-            
-            // Outposts are only open during the day (0-12000 in Minecraft time)
             boolean shouldBeOpen = worldTime >= 0 && worldTime < 12000;
+            
+            for (TraderOutpost outpost : entry.getValue()) {
             
             if (shouldBeOpen && !outpost.isOpen()) {
                 // Open the outpost

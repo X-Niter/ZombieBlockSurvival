@@ -76,10 +76,17 @@ public class DatabaseManager {
      */
     public boolean initialize() {
         try {
-            // Create database directory if it doesn't exist
+            // Create database directory with atomic operation
             File databaseDir = new File(plugin.getDataFolder(), "database");
-            if (!databaseDir.exists()) {
-                databaseDir.mkdirs();
+            if (!databaseDir.exists() && !databaseDir.mkdirs()) {
+                plugin.getLogger().severe("Failed to create database directory");
+                return false;
+            }
+            
+            // Verify directory is writable
+            if (!databaseDir.canWrite()) {
+                plugin.getLogger().severe("Database directory is not writable");
+                return false;
             }
             
             // Set up database file
