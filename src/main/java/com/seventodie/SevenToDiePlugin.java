@@ -58,17 +58,30 @@ public class SevenToDiePlugin extends JavaPlugin {
   
   @Override
   public void onDisable() {
-    // Save data
-    if (databaseManager != null) {
-      databaseManager.shutdown();
+    try {
+      // Save data
+      if (databaseManager != null) {
+        databaseManager.shutdown();
+      }
+      
+      // Cleanup managers
+      if (traderManager != null) {
+        traderManager.cleanup();
+      }
+      if (structureManager != null) {
+        structureManager.cleanup();
+      }
+      if (blockManager != null) {
+        blockManager.cleanup();
+      }
+      
+      // Handle remaining tasks
+      getServer().getScheduler().cancelTasks(this);
+      
+      getLogger().info("SevenToDie plugin has been disabled successfully!");
+    } catch (Exception e) {
+      getLogger().severe("Error during plugin shutdown: " + e.getMessage());
     }
-    
-    // Cleanup
-    if (traderManager != null) {
-      traderManager.cleanup();
-    }
-    
-    getLogger().info("SevenToDie plugin has been disabled!");
   }
   
   /**

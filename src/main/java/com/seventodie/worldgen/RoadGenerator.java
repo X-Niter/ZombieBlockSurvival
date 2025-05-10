@@ -198,16 +198,21 @@ public class RoadGenerator {
      * @param isCurb Whether this block is a curb
      */
     private void placeRoadBlock(World world, int x, int y, int z, boolean isCurb) {
-        // Get the block and set it to road material
-        Block block = world.getBlockAt(x, y, z);
-        block.setType(isCurb ? ROAD_CURB_MATERIAL : ROAD_MATERIAL);
-        
-        // Clear a few blocks above for clearance
-        for (int i = 1; i <= 3; i++) {
-            Block airBlock = world.getBlockAt(x, y + i, z);
-            if (!airBlock.getType().equals(Material.AIR)) {
-                airBlock.setType(Material.AIR);
+        try {
+            // Get the block and set it to road material
+            Block block = world.getBlockAt(x, y, z);
+            block.setType(isCurb ? ROAD_CURB_MATERIAL : ROAD_MATERIAL, true);
+            
+            // Clear a few blocks above for clearance
+            for (int i = 1; i <= 3; i++) {
+                Block airBlock = world.getBlockAt(x, y + i, z);
+                if (!airBlock.getType().equals(Material.AIR)) {
+                    airBlock.setType(Material.AIR, true);
+                }
             }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to place road block at " + x + "," + y + "," + z + ": " + e.getMessage());
+        }
         }
         
         // Add support blocks below if needed

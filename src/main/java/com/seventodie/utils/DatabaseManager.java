@@ -636,7 +636,10 @@ public class DatabaseManager {
                                double sizeX, double sizeY, double sizeZ, 
                                String schematic, int rotation) {
         if (!isConnectionAvailable()) {
-            plugin.getLogger().warning("Database connection not available. Structure could not be saved.");
+            plugin.getLogger().severe("Database connection not available. Structure could not be saved. Attempting reconnection...");
+            if (initialize()) {
+                return saveStructure(id, type, location, sizeX, sizeY, sizeZ, schematic, rotation);
+            }
             return false;
         }
                                
