@@ -171,3 +171,50 @@ jobs:
             🧠 GPT Suggestion: `${{ steps.suggestion.outputs.choices }}`
 
             _If this differs from the applied label, consider renaming or adjusting your PR title._
+
+
+  suggest-label:
+    name: 🤔 Suggest Label if Mismatch
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: 🧾 Checkout
+        uses: actions/checkout@v3
+
+      - name: 🧠 Analyze PR Content vs Title
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          pip install openai
+          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+          git diff origin/${{ github.event.pull_request.base.ref }} HEAD > pr.diff
+
+          title="${{ github.event.pull_request.title }}"
+          body="$(cat pr.diff | head -c 1000)"
+
+          python3 -c "
+import openai, os
+openai.api_key = os.getenv('OPENAI_API_KEY')
+
+title = \"""${title}"""
+diff = \"""$(cat pr.diff | head -c 1000)"""
+
+response = openai.ChatCompletion.create(
+  model='gpt-4',
+  messages=[
+    { 'role': 'user', 'content': f'Here is a GitHub PR title: {title}\nHere is the diff: {diff}\n\nDoes the title accurately describe the contents? Suggest a better label or title if not.' }
+  ]
+)
+
+suggestion = response.choices[0].message.content
+print(suggestion)
+with open('suggestion.txt', 'w') as f:
+  f.write(suggestion)
+"
+
+      - name: 💬 Comment Suggestion on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          header: label-suggestion
+          path: suggestion.txt
