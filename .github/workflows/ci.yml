@@ -51,7 +51,7 @@ jobs:
           path: ~/.m2/repository
           key: ${{ runner.os }}-m2-cache-${{ hashFiles('**/pom.xml') }}
       - run: mvn --batch-mode verify
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v2
         with:
           name: test-reports
           path: target/surefire-reports
