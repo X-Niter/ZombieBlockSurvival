@@ -7,10 +7,10 @@ export default async function handler(_: NextApiRequest, res: NextApiResponse) {
   const [owner, repoName] = repo.split('/')
 
   const prs = await fetch(
-    `https://api.github.com/repos/\${owner}/\${repoName}/pulls`,
+    \`https://api.github.com/repos/\${owner}/\${repoName}/pulls\`,
     {
       headers: {
-        Authorization: `Bearer \${token}`,
+        Authorization: \`Bearer \${token}\`,
         Accept: 'application/vnd.github+json',
       }
     }
@@ -25,7 +25,7 @@ export default async function handler(_: NextApiRequest, res: NextApiResponse) {
   const merge = await fetch(aiPR.url + '/merge', {
     method: 'PUT',
     headers: {
-      Authorization: `Bearer \${token}`,
+      Authorization: \`Bearer \${token}\`,
       Accept: 'application/vnd.github+json',
     }
   })

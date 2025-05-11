@@ -9,10 +9,10 @@ export default async function handler(_: NextApiRequest, res: NextApiResponse) {
   if (!token) return res.status(401).json({ error: 'Missing GITHUB_TOKEN' })
 
   const runsRes = await fetch(
-    `https://api.github.com/repos/\${owner}/\${repoName}/actions/runs?per_page=5`,
+    \`https://api.github.com/repos/\${owner}/\${repoName}/actions/runs?per_page=5\`,
     {
       headers: {
-        Authorization: `Bearer \${token}`,
+        Authorization: \`Bearer \${token}\`,
         Accept: 'application/vnd.github+json',
       }
     }
@@ -23,7 +23,7 @@ export default async function handler(_: NextApiRequest, res: NextApiResponse) {
   for (const run of runs.workflow_runs || []) {
     const logsRes = await fetch(run.logs_url, {
       headers: {
-        Authorization: `Bearer \${token}`,
+        Authorization: \`Bearer \${token}\`,
         Accept: 'application/vnd.github+json',
       }
     })
