@@ -10,7 +10,7 @@ A comprehensive Minecraft server plugin that recreates 7 Days To Die gameplay me
 <table>
   <tr>
     <td align="center">
-      <a href="https://github.com/X-Niter/ZombieBlockSurvival">
+      <a href="https://x-niter.github.io/ZombieBlockSurvival/">
         <img src="https://img.shields.io/badge/-DASHBOARD-6610F2?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMyAzdjZoOFYzaC04ek0zIDIxaDhWMTFIM3YxMHptMC04aDhWM0gzdjEwem0xMCA4aDhWMTFoLTh2MTB6Ii8+PC9zdmc+" alt="Dashboard" /><br />AI Dashboard
       </a>
     </td>
