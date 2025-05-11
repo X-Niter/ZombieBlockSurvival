@@ -7,9 +7,15 @@ export default function TalismanReport() {
   const [results, setResults] = useState([])
 
   useEffect(() => {
-    fetch('/api/github/talisman-logs')
-      .then(res => res.json())
-      .then(setResults)
+    const fetchData = async () => {
+      const res = await fetch('/api/github/talisman-logs')
+      const data = await res.json()
+      setResults(data)
+    }
+
+    fetchData()
+    const interval = setInterval(fetchData, 10000) // Refresh every 10s
+    return () => clearInterval(interval)
   }, [])
 
   return (

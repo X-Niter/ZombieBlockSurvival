@@ -2,19 +2,23 @@
 name: Talisman Secret Scanner
 
 on:
-  pull_request:
   push:
     branches:
       - main
-      - master
+  pull_request:
 
 jobs:
-  scan:
+  talisman-scan:
+    name: Scan for Secrets
     runs-on: ubuntu-latest
-    name: Run Talisman Secret Scan
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Install Talisman
+        run: |
+          curl https://thoughtworks.github.io/talisman/install.sh | bash
+          sudo mv talisman_linux_amd64 /usr/local/bin/talisman
+
       - name: Run Talisman
-        uses: thoughtworks/talisman@v1.37.0
+        run: talisman --scan
