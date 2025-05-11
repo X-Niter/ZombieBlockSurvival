@@ -4,6 +4,47 @@ A comprehensive Minecraft server plugin that recreates 7 Days To Die gameplay me
 
 > 🤖 **Fully Autonomous Development**: This project uses an AI-powered autonomous development system that works 24/7 to analyze, fix, and improve code with minimal human intervention. [Learn how it works](.github/AI_DEVELOPMENT.md)
 
+## 🚀 Quick Access
+
+<div align="center">
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://yourusername.github.io/seventodie/">
+        <img src="https://img.shields.io/badge/-DASHBOARD-6610F2?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMyAzdjZoOFYzaC04ek0zIDIxaDhWMTFIM3YxMHptMC04aDhWM0gzdjEwem0xMCA4aDhWMTFoLTh2MTB6Ii8+PC9zdmc+" alt="Dashboard" /><br />AI Dashboard
+      </a>
+    </td>
+    <td align="center">
+      <a href=".github/AI_DEVELOPMENT.md">
+        <img src="https://img.shields.io/badge/-AI%20DOCS-0EA5E9?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xOSAzSDVhMiAyIDAgMCAwLTIgMnYxNGEyIDIgMCAwIDAgMiAyaDE0YTIgMiAwIDAgMCAyLTJWNWEyIDIgMCAwIDAtMi0yem0tMSA1djJoLTJ2MmgydjJoLTJ2Mmgybv2H2JYTN2LTJ2LTJoLTJWOGgyVjZoLTJ2Mmgyek02IDZoNHYySDZ6bTAgNGg0djJINnptMCA0aDR2Mkg2em00IDRINnYtMmg0eiIvPjwvc3ZnPg==" alt="AI Docs" /><br />AI Documentation
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/yourusername/seventodie/actions">
+        <img src="https://img.shields.io/badge/-ACTIONS-2F81F7?style=for-the-badge&logo=github-actions" alt="GitHub Actions" /><br />GitHub Actions
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/yourusername/seventodie/issues/new?assignees=&labels=enhancement&template=feature_request.md">
+        <img src="https://img.shields.io/badge/-NEW%20FEATURE-52BD95?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xOSAxM2gtNnY2aC0ydi02SDV2LTJoNlY1aDJ2Nmg2djJ6Ii8+PC9zdmc+" alt="New Feature" /><br />Request Feature
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/yourusername/seventodie/issues/new?assignees=&labels=bug&template=bug_report.md">
+        <img src="https://img.shields.io/badge/-REPORT%20BUG-FC6D26?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0yMCA4aC0yLjgxYTUuOTg1IDUuOTg1IDAgMCAwLTEuODItMy4zNkwxNi4yMiAzIDEzIDYuMjJsMS4yMyAxLjIzQTUuOTAxIDUuOTAxIDAgMCAwIDEyLjk5IDhINGwzIDRsLTQgNmgxMC44YTYuMDA2IDYuMDA2IDAgMCAwIDUuMTktMi45ODZMMjIgMTRsLTMtNiAxIDDoeiIvPjwvc3ZnPg==" alt="Report Bug" /><br />Report Bug
+      </a>
+    </td>
+    <td align="center">
+      <a href="plugin/target/">
+        <img src="https://img.shields.io/badge/-DOWNLOAD-44CC11?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAxNmw0LTRoLTN2LTloLTJ2OUg4bDQgNHptOS0xMnY5YzAgMjAyMl8wMl8wMXswIDAtMC44OTggMi00LjAxIDItaC0xdjJoMWM0LjUzNCAwIDctMyA3LTN2LTEwYzAtNC45OTgtMy4zNzMtOC45OTgtOC0xMEgxNHYyLjAwMmMuODM4LjA4OCAxLjY4MS4yNSAyLjUwMS40OTlIMTdWMmg0LjVDMjIuMzY5IDIgMjMgMi42MzEgMjMgMy41eiIvPjwvc3ZnPg==" alt="Download" /><br />Download Plugin
+      </a>
+    </td>
+  </tr>
+</table>
+</div>
+
 ## Repository Structure
 
 This repository is organized as a comprehensive mono-repo that contains:
@@ -63,6 +104,22 @@ The autonomous system works continuously:
 - It handles routine maintenance and testing
 - It proactively suggests improvements
 - It responds to community issues and PRs
+
+### Dashboard Control Center
+
+The project includes a comprehensive dashboard for monitoring and controlling the autonomous system:
+
+<div align="center">
+  <img src="docs/images/dashboard-preview.svg" alt="Dashboard Preview" width="80%" />
+</div>
+
+**Dashboard Features:**
+- Real-time autonomous system status monitoring
+- Activity logs for AI interactions and implementations
+- System health metrics and self-repair tracking
+- Issue and PR analytics
+
+**Access the dashboard:** [Visit GitHub Pages Dashboard](https://yourusername.github.io/seventodie/)
 
 Learn more about this system in the [AI Development Guide](.github/AI_DEVELOPMENT.md).
 
