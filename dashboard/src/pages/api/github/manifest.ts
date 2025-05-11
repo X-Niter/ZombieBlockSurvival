@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       method: 'POST',
       headers: {
         Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`
+        Authorization: "Bearer " + process.env.GITHUB_TOKEN
       },
       body: JSON.stringify(manifest)
     })
