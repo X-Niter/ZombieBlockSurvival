@@ -53,7 +53,7 @@ export default function RoleManager() {
           <h2 className="text-lg font-bold text-zinc-200 mb-2">All Users</h2>
           <ul className="text-sm text-zinc-400 space-y-1">
             {Object.entries(users).map(([u, role]) => (
-              <li key={u}><b className="text-white">{u}</b>: {role}</li>
+              <li key={u}><b className="text-white">{u}</b>: {role as string}</li>
             ))}
           </ul>
         </div>
