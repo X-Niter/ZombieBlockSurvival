@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const accessToken = tokenData.access_token
 
   const userRes = await fetch('https://api.github.com/user', {
-    headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN || ""}` }
+    headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN || ""}`}
   })
   const user = await userRes.json()
   const username = user.login
