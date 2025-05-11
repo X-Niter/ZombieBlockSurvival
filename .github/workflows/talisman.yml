@@ -1,0 +1,20 @@
+
+name: Talisman Secret Scanner
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    name: Run Talisman Secret Scan
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Talisman
+        uses: thoughtworks/talisman@v1.37.0
