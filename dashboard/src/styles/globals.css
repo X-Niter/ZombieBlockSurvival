@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 body {
+  scroll-behavior: smooth;
+  transition: all 0.2s ease-in-out;
   @apply bg-zinc-900 text-white;
   font-family: 'Courier New', monospace;
   text-shadow: 0 0 1px #000;

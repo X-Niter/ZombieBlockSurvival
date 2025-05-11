@@ -3,27 +3,33 @@ import Head from 'next/head'
 import MainLayout from '@/layouts/MainLayout'
 import { useEffect, useState } from 'react'
 
-export default function ReleaseManager() {
-  const [enabled, setEnabled] = useState(false)
-  const [loading, setLoading] = useState(true)
+export default function AdminReleases() {
+  const [role, setRole] = useState(null)
 
   useEffect(() => {
-    fetch('/api/onboarding/get-release-setting')
+    fetch('/api/admin/get-session')
       .then(res => res.json())
-      .then(data => {
-        setEnabled(data.releaseApprovalUI === true)
-        setLoading(false)
+      .then(({ username }) => {
+        if (!username) return
+        fetch('/api/admin/get-roles')
+          .then(res => res.json())
+          .then(users => {
+            const r = users[username] || null
+            if (r === 'pending') {
+              window.location.href = '/pending'
+            } else {
+              setRole(r)
+            }
+          })
       })
   }, [])
 
-  if (loading) return <MainLayout><p className="text-zinc-300 p-10">Loading...</p></MainLayout>
-
-  if (!enabled) {
+  if (!role) {
     return (
       <MainLayout>
         <div className="text-center py-20">
-          <h1 className="text-2xl text-zinc-400">🚫 Release approval system not enabled.</h1>
-          <p className="text-zinc-500 text-sm mt-2">You can enable it during onboarding or in config.</p>
+          <h1 className="text-xl text-red-400">🚫 Access Denied</h1>
+          <p className="text-zinc-500 text-sm">Only logged-in users with roles can access this panel.</p>
         </div>
       </MainLayout>
     )
@@ -31,14 +37,24 @@ export default function ReleaseManager() {
 
   return (
     <MainLayout>
-      <Head>
-        <title>Release Approval Panel</title>
-      </Head>
-      <div className="space-y-6 py-10 px-4 max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-amber-400">📦 Approve Stable Release</h1>
-        <p className="text-sm text-zinc-400">View and promote alpha/beta pre-releases to stable.</p>
-        <div className="text-sm text-zinc-500 pt-4">
-          (This panel is under construction and will list releases fetched from GitHub.)
+      <Head><title>Release Panel | Admin</title></Head>
+      <div className="max-w-5xl mx-auto p-8">
+        <h1 className="text-3xl font-bold text-yellow-400 mb-6">🚨 Admin Release Controls</h1>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="p-6 bg-zinc-900 border border-zinc-700 rounded-xl">
+            <h2 className="text-xl font-bold text-zinc-200 mb-2">Pending AI Fix Approval</h2>
+            <p className="text-zinc-400 text-sm mb-4">Approve AI-generated pull requests to finalize releases.</p>
+            {role === 'admin' && (
+              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">✅ Approve Release</button>
+            )}
+          </div>
+          {role === 'admin' && (
+            <div className="p-6 bg-zinc-900 border border-zinc-700 rounded-xl">
+              <h2 className="text-xl font-bold text-zinc-200 mb-2">User Access Management</h2>
+              <p className="text-zinc-400 text-sm mb-4">Control which users may trigger AI merges or auto-promote builds.</p>
+              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">🔧 Manage Users</button>
+            </div>
+          )}
         </div>
       </div>
     </MainLayout>

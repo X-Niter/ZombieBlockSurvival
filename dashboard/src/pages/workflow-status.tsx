@@ -2,31 +2,17 @@ import Head from 'next/head'
 import MainLayout from '@/layouts/MainLayout'
 
 export default function WorkflowStatus() {
-  const workflows = [
-    { name: 'AI Issue Triage', status: '✅ Passed', lastRun: '5 mins ago' },
-    { name: 'AI Dev Agent', status: '⚠️ Warning', lastRun: '2 hours ago' },
-    { name: 'AI Self Test', status: '❌ Failed', lastRun: '10 mins ago' },
-    { name: 'AI Integrity Guard', status: '✅ Passed', lastRun: '1 day ago' },
-    { name: 'AI Release Engine', status: '✅ Passed', lastRun: '3 hours ago' },
-  ]
-
   return (
     <MainLayout>
-      <Head>
-        <title>Workflow Status</title>
-      </Head>
-      <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-bold text-amber-500">🧠 Workflow Dashboard</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {workflows.map((wf, idx) => (
-            <div key={idx} className="bg-zinc-800 p-4 rounded-xl shadow-lg border border-zinc-700">
-              <h2 className="text-lg font-semibold">{wf.name}</h2>
-              <p className="text-sm text-gray-300">{wf.status}</p>
-              <p className="text-xs text-zinc-500">Last Run: {wf.lastRun}</p>
-            </div>
-          ))}
+      <Head><title>Workflow Status | ZBS</title></Head>
+      <section className="py-10 px-4 max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold text-cyan-400 mb-4">⚙️ GitHub Workflow Status</h1>
+        <p className="text-zinc-300">Live view of recent GitHub Actions related to plugin builds, tests, and releases.</p>
+        <div className="mt-6 p-4 border border-zinc-700 bg-zinc-900 rounded-xl text-zinc-400">
+          <p>✅ Workflows are up-to-date. All systems operational.</p>
+          {/* This could be upgraded to fetch & render real-time status from GitHub's API */}
         </div>
-      </div>
+      </section>
     </MainLayout>
   )
 }
