@@ -10,7 +10,7 @@ A comprehensive Minecraft server plugin that recreates 7 Days To Die gameplay me
 <table>
   <tr>
     <td align="center">
-      <a href="https://yourusername.github.io/seventodie/">
+      <a href="https://github.com/X-Niter/ZombieBlockSurvival">
         <img src="https://img.shields.io/badge/-DASHBOARD-6610F2?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMyAzdjZoOFYzaC04ek0zIDIxaDhWMTFIM3YxMHptMC04aDhWM0gzdjEwem0xMCA4aDhWMTFoLTh2MTB6Ii8+PC9zdmc+" alt="Dashboard" /><br />AI Dashboard
       </a>
     </td>
@@ -20,19 +20,19 @@ A comprehensive Minecraft server plugin that recreates 7 Days To Die gameplay me
       </a>
     </td>
     <td align="center">
-      <a href="https://github.com/yourusername/seventodie/actions">
+      <a href="https://github.com/X-Niter/ZombieBlockSurvival/actions">
         <img src="https://img.shields.io/badge/-ACTIONS-2F81F7?style=for-the-badge&logo=github-actions" alt="GitHub Actions" /><br />GitHub Actions
       </a>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <a href="https://github.com/yourusername/seventodie/issues/new?assignees=&labels=enhancement&template=feature_request.md">
+      <a href="https://github.com/X-Niter/ZombieBlockSurvival/issues/new?assignees=&labels=enhancement&template=feature_request.md">
         <img src="https://img.shields.io/badge/-NEW%20FEATURE-52BD95?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xOSAxM2gtNnY2aC0ydi02SDV2LTJoNlY1aDJ2Nmg2djJ6Ii8+PC9zdmc+" alt="New Feature" /><br />Request Feature
       </a>
     </td>
     <td align="center">
-      <a href="https://github.com/yourusername/seventodie/issues/new?assignees=&labels=bug&template=bug_report.md">
+      <a href="https://github.com/X-Niter/ZombieBlockSurvival/issues/new?assignees=&labels=bug&template=bug_report.md">
         <img src="https://img.shields.io/badge/-REPORT%20BUG-FC6D26?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0yMCA4aC0yLjgxYTUuOTg1IDUuOTg1IDAgMCAwLTEuODItMy4zNkwxNi4yMiAzIDEzIDYuMjJsMS4yMyAxLjIzQTUuOTAxIDUuOTAxIDAgMCAwIDEyLjk5IDhINGwzIDRsLTQgNmgxMC44YTYuMDA2IDYuMDA2IDAgMCAwIDUuMTktMi45ODZMMjIgMTRsLTMtNiAxIDDoeiIvPjwvc3ZnPg==" alt="Report Bug" /><br />Report Bug
       </a>
     </td>
