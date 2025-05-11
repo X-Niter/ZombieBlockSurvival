@@ -1,0 +1,158 @@
+
+🔭 AI AGENT PROMPT — DISCORD BOT + MODERN SPACE-THEMED WEB DASHBOARD (2025 STACK) 🔭
+
+PROJECT GOAL:
+Build a full-featured, sleek, and premium Discord bot application with an associated web dashboard that supports:
+- User authentication (OAuth2 GitHub/Discord)
+- Premium tier system
+- Custom commands (like YAGPDB)
+- Built-in AI assistant for dynamic updates
+- Server-specific configurations
+- Real-time UI updates
+- Seamless self-hosting and deployment
+- Theming (default: modern space-inspired theme)
+
+=========================================
+💻 BACKEND SPECIFICATION (BUN + HONO)
+=========================================
+
+1. Runtime:
+   - Use **Bun** as the runtime instead of Node.js
+   - Native TypeScript support
+   - Fast bundling, testing, and performance
+
+2. Web Framework:
+   - Use **Hono** for backend routing (super lightweight, edge-optimized)
+   - Alternative fallback: Express.js if Hono is not supported
+
+3. Discord Bot:
+   - Use **Discord.js v14**
+   - Use Slash Commands + Context Menus
+   - Set up command handler and event handler system
+
+4. Database:
+   - Use **PostgreSQL**
+   - Use **Prisma ORM**
+     - Define models for Users, Guilds, Premium Tiers, Custom Commands, Themes
+
+5. Auth:
+   - Use **Lucia Auth**
+   - Support Discord and GitHub OAuth2 login
+   - Store sessions securely using cookies or JWT
+
+6. Hosting:
+   - Suggest deployment via **Railway**, **Fly.io**, or **Supabase**
+
+=========================================
+🌐 FRONTEND DASHBOARD (NEXT.JS + SHADCN)
+=========================================
+
+1. Framework:
+   - Use **Next.js** (App Router with server components)
+   - File-based routing under `/app`
+
+2. UI Library:
+   - Use **ShadCN UI** built on **Radix UI + TailwindCSS**
+   - Do not handcraft components unless necessary
+   - Use their documented layout and theming system
+
+3. Theming:
+   - Default theme: Modern space-themed aesthetic
+     - Dark UI
+     - Deep blue & purple gradients
+     - Nebula-inspired background elements
+     - Elegant glow effects (minimalist, not too loud)
+   - Theming system should support user customization
+     - Use Tailwind CSS variables and `data-theme` attributes
+
+4. Styling:
+   - Use **TailwindCSS**
+   - Extend the theme with CSS variables for colors, fonts, etc.
+   - Avoid inline styles unless required
+
+5. Animations:
+   - Use **Framer Motion** for transitions and interactive elements
+   - Ensure motion respects user accessibility settings (reduced motion)
+
+6. Forms:
+   - Use **React Hook Form + Zod** for form handling and validation
+   - Provide accessible, error-proof inputs with live validation
+
+7. State Management:
+   - Use **Zustand** for minimal and powerful shared state
+   - Avoid Redux or Context API unless needed for SSR compatibility
+
+=========================================
+🎯 FUNCTIONAL REQUIREMENTS
+=========================================
+
+1. Authentication:
+   - Allow users to log in via Discord and GitHub
+   - Link Discord account with bot usage features
+
+2. Dashboard Features:
+   - Guild selector
+   - Premium tier settings (pricing, PayPal integration)
+   - Custom command scripting UI (like YAGPDB)
+   - AI configuration helper embedded in dashboard
+   - Live logs of bot activity
+
+3. Admin Panel:
+   - Role-based access control (admin, moderator, viewer)
+   - Add/remove/approve new bot features via dashboard
+   - Toggle feature flags for beta/testing
+
+4. AI Integration:
+   - Agent should:
+     - Self-test generated code before execution
+     - Apply linting, formatting, and error correction automatically
+     - Be capable of retrying failed build steps
+     - Prefer working with typed APIs and schema-first generation
+     - Output only working, polished code and UI
+
+5. Real-Time Features:
+   - Use WebSockets or server-sent events for live bot status
+   - Allow toggling features without page reload
+
+6. Payment Integration:
+   - Embed PayPal and Stripe (optional) for premium plans
+   - Dashboard should show billing history and plan usage
+
+=========================================
+📦 MONOREPO STRUCTURE (OPTIONAL)
+=========================================
+
+Use **Turborepo** or **Nx** if the project will live in a single monorepo. Structure:
+
+/apps
+  - /bot
+  - /dashboard
+/packages
+  - /ui (custom ShadCN-based components)
+  - /db (Prisma client + schema)
+  - /config (shared config files)
+
+=========================================
+📄 FILE NAMING AND STRUCTURE RULES
+=========================================
+
+- All backend files should be named in kebab-case
+- All frontend React components should use PascalCase
+- Use `.tsx` for components and `.ts` for logic
+- Ensure all Prisma models are documented
+- Follow ESLint + Prettier conventions
+
+=========================================
+🧠 FINAL NOTES
+=========================================
+
+- Prefer type-safe approaches (TypeScript everything)
+- Avoid Alpine.js, jQuery, or manual DOM manipulation
+- Use ShadCN UI **exclusively** for components (https://ui.shadcn.dev/docs)
+- Stick to modern React 18 patterns (App Router, Server Components)
+- Stick to clean layouts — no overuse of gradients, shadows, or animations
+- Theme should be cosmic, premium, but not cluttered — like Discord’s dark mode crossed with Nebula OS
+
+> Output only valid, optimized, and readable code. Self-test everything before showing it to the user. If a UI component looks broken, regenerate it using ShadCN patterns or Tailwind layout utilities.
+
+END OF PROMPT.
