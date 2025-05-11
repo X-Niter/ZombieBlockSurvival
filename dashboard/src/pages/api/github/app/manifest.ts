@@ -1,23 +1,27 @@
+import type { NextApiRequest, NextApiResponse } from "next";
 
-import type { NextApiRequest, NextApiResponse } from 'next'
-
-export default function handler(_: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const manifest = {
-    name: "ZombieBlockSurvival AI Automation",
-    url: "https://github.com/X-Niter/ZombieBlockSurvival",
+    name: "ZombieBlockSurvival Dev Assistant",
+    url: "https://your-site.com",
     hook_attributes: {
-      url: "https://zombieblocksurvival.com/api/github/webhook"
+      url: "https://your-site.com/api/github/webhook"
     },
-    redirect_url: "https://zombieblocksurvival.com/admin/install-complete",
+    redirect_url: "https://your-site.com/onboarding/complete",
     public: true,
     default_permissions: {
       contents: "read",
+      issues: "write",
       pull_requests: "write",
-      actions: "read",
-      metadata: "read"
+      workflows: "write"
     },
-    default_events: ["push", "pull_request", "workflow_run"]
-  }
+    default_events: [
+      "push",
+      "pull_request",
+      "issues",
+      "workflow_run"
+    ]
+  };
 
-  res.status(200).json(manifest)
+  res.status(200).json(manifest);
 }
