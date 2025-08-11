@@ -11,6 +11,6 @@ jobs:
   respond_or_patch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Analyze context and respond via AI
         run: echo "Handling PRs and comments intelligently"
